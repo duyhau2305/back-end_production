@@ -1,8 +1,7 @@
 const express = require('express');
-const connectDB = require('./config/db');
-const userRoutes = require('./routes/userRoutes');
-
-
+const serverless = require('serverless-http');
+const connectDB = require('../config/db');
+const userRoutes = require('../routes/userRoutes');
 
 const dotenv = require('dotenv');
 const cors = require('cors');
@@ -21,9 +20,6 @@ app.use(express.json());
 app.use(cors());
 
 // Sử dụng routes
-
 app.use('/api', userRoutes);
 
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+module.exports.handler = serverless(app);
