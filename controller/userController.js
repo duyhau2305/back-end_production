@@ -40,15 +40,15 @@ const loginUser = async (req, res) => {
             {
                 user: {
                     id: user._id,
-                    role: user.role,          // Thêm trường role
-                    isAdmin: user.isAdmin,    // Thêm trường isAdmin
-                    username: user.username,  // Thêm trường username
-                    email: user.email,        // Thêm trường email
-                    password: user.password   // Thêm trường password
+                    role: user.role,          
+                    isAdmin: user.isAdmin,    
+                    username: user.username,  
+                    email: user.email,        
+                    password: user.password  
                 }
             },
             process.env.JWT_SECRET,
-            { expiresIn: '5h' }
+            { expiresIn: '12h' }
         );
 
         res.status(200).json({ token, user });
