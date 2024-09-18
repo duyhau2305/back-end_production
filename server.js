@@ -1,9 +1,6 @@
 const express = require('express');
 const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
-
-
-
 const dotenv = require('dotenv');
 const cors = require('cors');
 
@@ -21,9 +18,12 @@ app.use(express.json());
 app.use(cors());
 
 // Sử dụng routes
-
 app.use('/api', userRoutes);
 
-
+// Sử dụng cổng từ file .env hoặc mặc định là 5000
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Chạy server và lắng nghe trên tất cả các IP (0.0.0.0)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on IP: 0.0.0.0 and port ${PORT}`);
+});
