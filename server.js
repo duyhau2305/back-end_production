@@ -3,6 +3,7 @@ const connectDB = require('./config/db');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const telemetryRoutes = require('./routes/telemetryRoutes');
+const usRoutes =require('./routes/userRoutes')
 
 dotenv.config();
 
@@ -17,6 +18,8 @@ app.use(cors());
 
 // Sử dụng routes telemetry
 app.use('/api/telemetry', telemetryRoutes);
+
+app.use('/api',usRoutes)
 
 // Cấu hình cổng
 const PORT = process.env.PORT || 5000;
