@@ -39,5 +39,17 @@ router.get('/fetch', async (req, res) => {
     res.status(500).json({ error: 'Lỗi khi lấy dữ liệu' });
   }
 });
+router.get('/', async (req, res) => {
+    try {
+      // Lấy tất cả dữ liệu telemetry từ MongoDB
+      const telemetryData = await Telemetry.find();
+      
+      // Trả về dữ liệu dưới dạng JSON
+      res.json(telemetryData);
+    } catch (error) {
+      console.error('Error fetching telemetry data from MongoDB:', error);
+      res.status(500).json({ error: 'Lỗi khi truy xuất dữ liệu từ MongoDB' });
+    }
+  });
 
 module.exports = router;
