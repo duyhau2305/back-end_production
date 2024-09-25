@@ -1,11 +1,20 @@
+// models/Telemetry.js
+
 const mongoose = require('mongoose');
 
-const telemetrySchema = new mongoose.Schema({
-  key: String,
-  value: mongoose.Mixed,
-  ts: Date,
-}, { timestamps: true });
+const TelemetrySchema = new mongoose.Schema({
+    deviceId: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        required: true
+    },
+    timestamp: {
+        type: Date,
+        default: Date.now
+    }
+});
 
-const Telemetry = mongoose.model('Telemetry', telemetrySchema);
-
-module.exports = Telemetry;
+module.exports = mongoose.model('Telemetry', TelemetrySchema);
