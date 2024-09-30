@@ -32,10 +32,10 @@ const getAccessToken = async () => {
 
 // Hàm để lấy dữ liệu từ ThingsBoard và lưu vào MongoDB
 const importDataFromThingsBoard = async (deviceIds) => {
-    const startTs = 1726477477000; // Thời gian bắt đầu
-    const endTs = 1727082900016; // Thời gian kết thúc
+    const startTs = 1704780039000; // Thời gian bắt đầu
+    const endTs = 1733724039000; // Thời gian kết thúc
     const interval = 3600; // Khoảng thời gian (giây)
-    const limit = 50000; // Giới hạn số lượng dữ liệu
+    const limit = 5000; // Giới hạn số lượng dữ liệu
 
     for (const deviceId of deviceIds) {
         try {
