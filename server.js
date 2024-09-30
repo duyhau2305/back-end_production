@@ -1,9 +1,9 @@
 // Import các thư viện cần thiết
 const express = require('express');
 const axios = require('axios');
-const DeviceStatus = require('./models/DeviceStatus'); // Đảm bảo đường dẫn đúng với mô hình của bạn
 const connectDB = require('./config/db'); // Kết nối đến MongoDB
 const dotenv = require('dotenv');
+const deviceStatusRoute = require('./routes/deviceStatusRoute'); // Import route mới tạo
 
 dotenv.config(); // Tải các biến môi trường từ tệp .env
 
@@ -55,7 +55,6 @@ const importDataFromThingsBoard = async (deviceIds) => {
             const statusData = response.data.status; // Dữ liệu lấy từ ThingsBoard
             console.log(`Response for device ${deviceId}:`, response.data);
 
-            
             // Kiểm tra xem statusData có tồn tại và có phải là một mảng không
             if (!statusData || !Array.isArray(statusData) || statusData.length === 0) {
                 console.error(`No status data found for device ${deviceId}. Response:`, response.data);
@@ -91,7 +90,7 @@ const startServer = async () => {
 
     // Gọi hàm importDataFromThingsBoard với danh sách deviceId
     const deviceIds = [
-        '543ff470-54c6-11ef-8dd4-b74d24d26b24', //May dap dong tam
+        '543ff470-54c6-11ef-8dd4-b74d24d26b24', // May dap dong tam
         // Thêm các deviceId khác nếu cần
     ];
 
@@ -100,5 +99,8 @@ const startServer = async () => {
         await importDataFromThingsBoard(deviceIds); // Gọi hàm để lấy dữ liệu khi khởi động
     });
 };
+
+// Sử dụng route mới tạo
+app.use('/api/device-status', deviceStatusRoute);
 
 startServer(); // Khởi động server
