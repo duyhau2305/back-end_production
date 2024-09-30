@@ -2,6 +2,7 @@
 const express = require('express');
 const axios = require('axios');
 const connectDB = require('./config/db'); // Kết nối đến MongoDB
+const DeviceStatus = require('./models/DeviceStatus');
 const dotenv = require('dotenv');
 const deviceStatusRoute = require('./routes/deviceStatusRoute'); // Import route mới tạo
 
