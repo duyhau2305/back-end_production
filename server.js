@@ -97,10 +97,13 @@ const startServer = async () => {
         // Thêm các deviceId khác nếu cần
     ];
 
-    app.listen(PORT, async () => {
-        console.log(`Server is running on port ${PORT}`);
+    app.listen(PORT, '0.0.0.0', async () => {
+        const host = '192.168.1.17'; // Địa chỉ mà server đang lắng nghe
+        console.log(`Server is running at http://${host}:${PORT}`); // In ra thông tin địa chỉ và cổng
         await importDataFromThingsBoard(deviceIds); // Gọi hàm để lấy dữ liệu khi khởi động
     });
+    
+    
 };
 
 // Sử dụng route mới tạo
