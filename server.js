@@ -7,11 +7,12 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const os = require('os'); // Thư viện để lấy thông tin mạng
 const deviceStatusRoute = require('./routes/deviceStatusRoute'); // Import route mới tạo
+const userRouter = require('./routes/userRoutes')
 
 dotenv.config(); // Tải các biến môi trường từ tệp .env
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Cổng mà server sẽ chạy
+const PORT = process.env.PORT; // Cổng mà server sẽ chạy
 app.use(cors());
 
 // Kết nối đến MongoDB
@@ -112,5 +113,6 @@ const startServer = async () => {
 
 // Sử dụng route mới tạo
 app.use('/api/device-status', deviceStatusRoute);
+app.use('/api', userRouter)
 
 startServer(); // Khởi động server
