@@ -22,11 +22,6 @@ app.use('/api/device-status', deviceStatusRoute);
 app.use('/api',userRouters)
 
   app.listen(PORT,  () => {
-    console.log(`Server is running on http://${localAddress}:${PORT}`);
+    console.log(`Server is running on ${PORT}`);
     
   });
-
-
-// Sử dụng route mới tạo
-
-
