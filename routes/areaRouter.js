@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const areaController = require('../controllers/areaController');
+const areaController = require('../controller/areaController');
 
 // Endpoint thêm khu vực
 router.post('/areas', areaController.createArea);
