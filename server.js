@@ -13,15 +13,15 @@ const deviceStatusRoute = require('./routes/deviceStatusRoute'); // Import route
 dotenv.config(); // Tải các biến môi trường từ tệp .env
 
 const app = express();
-const PORT = process.env.PORT; // Cổng mà server sẽ chạy
+const PORT = process.env.PORT || 3000; // Cổng mà server sẽ chạy
 app.use(cors());
 
 // Kết nối đến MongoDB
 connectDB();
 
 app.use('/api/device-status', deviceStatusRoute);
-app.use('/api',userRouters)
-app.user('/api/device, areaRouter')
+app.use('/api', userRouters);
+app.use('/api/device', areaRouter)
 
   app.listen(PORT,  () => {
     console.log(`Server is running on ${PORT}`);
