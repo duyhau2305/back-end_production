@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-// Tạo người dùng mới
+
 const createUser = async (userData) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
@@ -15,7 +15,7 @@ const createUser = async (userData) => {
     return await newUser.save();
 };
 
-// Tạo tài khoản admin mới
+
 const createAdminUser = async (userData) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
@@ -29,7 +29,7 @@ const createAdminUser = async (userData) => {
     return await newAdmin.save();
 };
 
-// Cập nhật thông tin người dùng
+
 const updateUser = async (userId, userData) => {
     if (userData.password) {
         const salt = await bcrypt.genSalt(10);
@@ -39,17 +39,17 @@ const updateUser = async (userId, userData) => {
     return await User.findByIdAndUpdate(userId, userData, { new: true });
 };
 
-// Xóa người dùng
+
 const deleteUser = async (userId) => {
     return await User.findByIdAndDelete(userId);
 };
 
-// Lấy danh sách người dùng
+
 const getUsers = async () => {
     return await User.find();
 };
 
-// Lấy thông tin người dùng theo ID
+
 const getUserById = async (id) => {
     try {
         const user = await User.findById(id);
@@ -62,7 +62,7 @@ const getUserById = async (id) => {
     }
 };
 
-// Đăng nhập người dùng
+
 const loginUser = async (username, password) => {
     try {
         const user = await User.findOne({ username });
@@ -77,7 +77,7 @@ const loginUser = async (username, password) => {
             throw new Error('Invalid username or password');
         }
 
-        // Tạo JWT token
+     
         const token = jwt.sign(
             {
                 user: {
