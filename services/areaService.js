@@ -1,5 +1,5 @@
 // services/areaService.js
-const Area = require('../models/areaModel');
+const Area = require('../models/Area');
 
 async function createArea(data) {
     const area = new Area(data);

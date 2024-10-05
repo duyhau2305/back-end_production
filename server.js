@@ -15,6 +15,9 @@ dotenv.config(); // Tải các biến môi trường từ tệp .env
 const app = express();
 const PORT = process.env.PORT || 3000; // Cổng mà server sẽ chạy
 app.use(cors());
+app.use(express.json());
+
+
 
 // Kết nối đến MongoDB
 connectDB();
