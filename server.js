@@ -6,7 +6,7 @@ const connectDB = require('./config/db'); // Kết nối đến MongoDB
 const cors = require('cors');
 const dotenv = require('dotenv');
 const userRouters = require('./routes/userRoutes');
-const  areaRouter =require('./routes/areaRouter')
+const  areaRoutes =require('./routes/areaRouter')
 
 const deviceStatusRoute = require('./routes/deviceStatusRoute'); // Import route mới tạo
 
@@ -21,7 +21,7 @@ connectDB();
 
 app.use('/api/device-status', deviceStatusRoute);
 app.use('/api', userRouters);
-app.use('/api/device', areaRouter)
+app.use('/api/areas', areaRoutes);
 
   app.listen(PORT,  () => {
     console.log(`Server is running on ${PORT}`);

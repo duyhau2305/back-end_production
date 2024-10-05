@@ -4,7 +4,7 @@ const areaSchema = new mongoose.Schema({
   areaCode: {
     type: String,
     required: true,
-    unique: true,
+  
   },
   areaName: {
     type: String,
