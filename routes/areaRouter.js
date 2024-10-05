@@ -1,17 +1,21 @@
+// routes/areaRoutes.js
 const express = require('express');
-const router = express.Router();
 const areaController = require('../controller/areaController');
+const router = express.Router();
 
-// Endpoint thêm khu vực
-router.post('/areas', areaController.createArea);
+// Create a new area
+router.post('/', areaController.createArea);
 
-// Endpoint lấy danh sách khu vực
-router.get('/areas', areaController.getAreas);
+// Get all areas
+router.get('/', areaController.getAllAreas);
 
-// Endpoint sửa thông tin khu vực
-router.put('/areas/:id', areaController.updateArea);
+// Get area by ID
+router.get('/:id', areaController.getAreaById);
 
-// Endpoint xóa khu vực
-router.delete('/areas/:id', areaController.deleteArea);
+// Update an area by ID
+router.put('/:id', areaController.updateArea);
+
+// Delete an area by ID
+router.delete('/:id', areaController.deleteArea);
 
 module.exports = router;
