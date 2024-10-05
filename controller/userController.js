@@ -1,9 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const userService = require('../services/userService');
+const userService = require('../services/UserService');
 const User = require('../models/User');
 
-// Tạo tài khoản admin
+
 const createAdminUser = async (req, res) => {
     try {
         const adminUser = await userService.createAdminUser(req.body);
@@ -14,7 +14,7 @@ const createAdminUser = async (req, res) => {
     }
 };
 
-// Đăng nhập người dùng
+
 const loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -35,7 +35,7 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Mật khẩu không đúng' });
         }
 
-        // Tạo token chứa các thông tin yêu cầu
+       
         const token = jwt.sign(
             {
                 user: {
@@ -59,17 +59,17 @@ const loginUser = async (req, res) => {
 };
 
 
-// Tạo người dùng mới
+
 const createUser = async (req, res) => {
     try {
         const { username, password, email } = req.body;
 
-        // Kiểm tra nếu thông tin cơ bản không được cung cấp
+        
         if (!username || !password || !email) {
             return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ tên đăng nhập, mật khẩu và email.' });
         }
 
-        // Kiểm tra nếu người dùng đã tồn tại
+        
         const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại.' });
@@ -83,13 +83,13 @@ const createUser = async (req, res) => {
     }
 };
 
-// Cập nhật thông tin người dùng
+
 const updateUser = async (req, res) => {
     try {
         const userId = req.params.id;
         const currentUser = req.user;
 
-        // Kiểm tra nếu người dùng không phải admin và đang cố gắng cập nhật tài khoản khác
+        
         if (!currentUser.isAdmin && currentUser.id !== userId) {
             return res.status(403).json({ message: 'Không có quyền cập nhật thông tin người dùng này.' });
         }
@@ -106,12 +106,12 @@ const updateUser = async (req, res) => {
     }
 };
 
-// Xóa người dùng
+
 const deleteUser = async (req, res) => {
     try {
         const userId = req.params.id;
 
-        // Kiểm tra nếu người dùng không tồn tại
+        
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'Người dùng không tồn tại.' });
@@ -125,7 +125,7 @@ const deleteUser = async (req, res) => {
     }
 };
 
-// Lấy danh sách người dùng
+
 const getUsers = async (req, res) => {
     try {
         const users = await userService.getUsers();
@@ -136,7 +136,7 @@ const getUsers = async (req, res) => {
     }
 };
 
-// Khóa/Mở khóa người dùng
+
 const toggleLockUser = async (req, res) => {
     try {
         const userId = req.params.id;
@@ -146,7 +146,7 @@ const toggleLockUser = async (req, res) => {
             return res.status(404).json({ message: 'Người dùng không tồn tại' });
         }
 
-        // Đảo ngược trạng thái khóa
+        
         user.locked = !user.locked;
         await user.save();
 

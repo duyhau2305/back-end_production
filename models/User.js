@@ -8,7 +8,7 @@
         password: { type: String, required: true },
         role: { type: String, required: true },
         isAdmin: { type: Boolean, default: false },
-        locked: { type: Boolean, default: false }, // Thêm thuộc tính locked
+        locked: { type: Boolean, default: false }, 
         createdAt: { type: Date, default: Date.now }
     });
 
