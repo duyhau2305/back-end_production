@@ -1,6 +1,6 @@
-// routes/areaRoutes.js
+
 const express = require('express');
-const areaController = require('../controller/areaController');
+const areaController = require('../controller/AreaController');
 const router = express.Router();
 
 // Create a new area

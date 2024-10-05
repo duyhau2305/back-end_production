@@ -1,5 +1,5 @@
 // controllers/areaController.js
-const areaService = require('../services/areaService');
+const areaService = require('../services/AreaService');
 
 async function createArea(req, res) {
     try {
