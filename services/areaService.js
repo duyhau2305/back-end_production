@@ -1,6 +1,8 @@
 // services/areaService.js
 const Area = require('../models/Area');
 
+
+//create Area
 async function createArea(data) {
     const area = new Area(data);
     return await area.save();

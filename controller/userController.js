@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const userService = require('../services/UserService');
 const User = require('../models/User');
 
-
+// Create user
 const createAdminUser = async (req, res) => {
     try {
         const adminUser = await userService.createAdminUser(req.body);
@@ -157,7 +157,7 @@ const toggleLockUser = async (req, res) => {
     }
 };
 
-// Lấy thông tin người dùng theo ID
+
 const getUserById = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);

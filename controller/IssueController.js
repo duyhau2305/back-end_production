@@ -3,7 +3,7 @@ const issueService = require('../services/IssueService');
 
 async function createIssue(req, res) {
   try {
-    // Dữ liệu từ frontend sẽ chứa `deviceNames` là một mảng
+  
     console.log("Request body:", req.body); 
     const issue = await issueService.createIssue(req.body);
     res.status(201).json(issue);
@@ -23,7 +23,7 @@ async function getAllIssues(req, res) {
 
 async function updateIssue(req, res) {
   try {
-    // Cập nhật issue theo ID với `deviceNames` là mảng từ frontend
+    
     const issue = await issueService.updateIssue(req.params.id, req.body);
     res.status(200).json(issue);
   } catch (err) {
