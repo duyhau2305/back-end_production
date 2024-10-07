@@ -6,19 +6,20 @@ async function createDevice(req, res) {
   const { areaName } = req.body; 
 
   try {
-    
-    const existingArea = await Area.findOne({ areaName });
+    // Kiểm tra khu vực dựa trên areaName được gửi từ frontend
+    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, "i") });
     if (!existingArea) {
-      return res.status(400).json({ message: `Khu vực ${areaName} không  tồn tại. Vui lòng chọn khu vực hợp lệ.` });
+      return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
     }
 
-    
+    // Tạo thiết bị nếu khu vực tồn tại
     const device = await deviceService.createDevice(req.body);
     res.status(201).json(device);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 }
+
 
 async function updateDevice(req, res) {
   try {

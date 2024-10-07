@@ -1,6 +1,6 @@
 // models/Device.js
 const mongoose = require('mongoose');
-const moment = require('moment'); // Thêm thư viện moment.js để định dạng ngày
+const moment = require('moment'); 
 
 const deviceSchema = new mongoose.Schema({
   deviceCode: {
@@ -16,7 +16,7 @@ const deviceSchema = new mongoose.Schema({
   },
   areaName: {
     type: String,
-    required: [true, 'Khu Vực là bắt buộc'], // Được kiểm tra từ bảng Area
+    required: [true, 'Khu Vực là bắt buộc'], 
     trim: true
   },
   model: {

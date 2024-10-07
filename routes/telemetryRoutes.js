@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const Telemetry = require('../models/Telemetry');
 
-// Lấy tất cả telemetry của nhiều thiết bị
+
 router.get('/', async (req, res) => {
     try {
         const telemetryData = await Telemetry.find({});
@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Lấy dữ liệu status của từng thiết bị theo deviceId
+
 router.get('/:deviceId', async (req, res) => {
     try {
         const telemetry = await Telemetry.find({ deviceId: req.params.deviceId });

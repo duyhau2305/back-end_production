@@ -18,7 +18,7 @@ async function updateArea(req, res) {
         }
         res.status(200).json(area);
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        res.status(400).json({ message: 'Mã khu vực hoặc tên khu vực đã tồn tại' });
     }
 }
 
