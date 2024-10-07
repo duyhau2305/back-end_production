@@ -33,8 +33,6 @@ const getIPAddress = () => {
 };
 
 
-
-// Kết nối đến MongoDB
 connectDB();
 
 app.use('/api/device-status', deviceStatusRoute);
