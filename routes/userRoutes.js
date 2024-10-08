@@ -12,6 +12,7 @@ router.post('/login', userController.loginUser);
 // Route get info user by ID ( require Admin)
 router.get('/users/:id', authMiddleware, userController.getUserById);
 
+
 // Routes user management( require Admin)
 router.get('/users', authMiddleware, adminMiddleware, userController.getUsers);
 router.post('/users', authMiddleware, adminMiddleware, userController.createUser);

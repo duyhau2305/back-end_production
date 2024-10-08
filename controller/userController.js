@@ -23,7 +23,7 @@ const loginUser = async (req, res) => {
 
         const user = await User.findOne({ username });
         if (!user) {
-            return res.status(400).json({ message: 'Tên đăng nhập không đúng' });
+            return res.status(400).json({ message: 'Tên đăng nhập hoặc mật khẩu  không đúng' });
         }
 
         console.log('User found:', user);
