@@ -12,7 +12,7 @@ const EmployeeSchema = new Schema({
     type: String,
     required: [true, 'Tên Nhân Viên là bắt buộc'],
   },
-  team: {
+  areaName: {
     type: String,
     required: [true, 'Tổ là bắt buộc'],
   },

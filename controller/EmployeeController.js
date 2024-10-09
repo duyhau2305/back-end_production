@@ -1,64 +1,89 @@
-// controllers/EmployeeController.js
-const employeeService = require('../services/EmployeeService');
+const Employee = require('../models/Employee'); // Import model Employee
+const Area = require('../models/Area'); // Import model Area
 
-async function getAllEmployees(req, res) {
+// Tạo mới Employee
+async function createEmployee(req, res) {
+  const { areaName } = req.body;
+
   try {
-    const employees = await employeeService.getAllEmployees();
-    res.status(200).json(employees);
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi lấy danh sách nhân viên', error });
+    // Kiểm tra khu vực có tồn tại hay không (không phân biệt chữ hoa chữ thường)
+    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, "i") });
+    if (!existingArea) {
+      return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
+    }
+
+    // Nếu khu vực tồn tại, tạo Employee mới
+    const employee = new Employee(req.body);
+    await employee.save();
+    res.status(201).json(employee);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 }
 
+// Cập nhật thông tin Employee
+async function updateEmployee(req, res) {
+  const { areaName } = req.body;
+
+  try {
+    // Kiểm tra khu vực có tồn tại hay không trước khi cập nhật
+    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, "i") });
+    if (!existingArea) {
+      return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
+    }
+
+    // Tiến hành cập nhật Employee
+    const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!employee) {
+      return res.status(404).json({ message: 'Nhân viên không tồn tại' });
+    }
+
+    res.status(200).json(employee);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+// Xóa Employee
+async function deleteEmployee(req, res) {
+  try {
+    const employee = await Employee.findByIdAndDelete(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Nhân viên không tồn tại' });
+    }
+    res.status(200).json({ message: 'Xóa nhân viên thành công' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+// Lấy Employee theo ID
 async function getEmployeeById(req, res) {
   try {
-    const employee = await employeeService.getEmployeeById(req.params.id);
+    const employee = await Employee.findById(req.params.id);
     if (!employee) {
       return res.status(404).json({ message: 'Nhân viên không tồn tại' });
     }
     res.status(200).json(employee);
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi lấy thông tin nhân viên', error });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 }
 
-async function createEmployee(req, res) {
+// Lấy danh sách tất cả Employee
+async function getAllEmployees(req, res) {
   try {
-    const newEmployee = await employeeService.createEmployee(req.body);
-    res.status(201).json(newEmployee);
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi tạo nhân viên mới', error });
-  }
-}
-
-async function updateEmployee(req, res) {
-  try {
-    const updatedEmployee = await employeeService.updateEmployee(req.params.id, req.body);
-    if (!updatedEmployee) {
-      return res.status(404).json({ message: 'Nhân viên không tồn tại' });
-    }
-    res.status(200).json(updatedEmployee);
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi cập nhật thông tin nhân viên', error });
-  }
-}
-
-async function deleteEmployee(req, res) {
-  try {
-    const deletedEmployee = await employeeService.deleteEmployee(req.params.id);
-    if (!deletedEmployee) {
-      return res.status(404).json({ message: 'Nhân viên không tồn tại' });
-    }
-    res.status(200).json({ message: 'Xóa nhân viên thành công' });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi xóa nhân viên', error });
+    const employees = await Employee.find();
+    res.status(200).json(employees);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 }
 
 module.exports = {
-  getAllEmployees,
-  getEmployeeById,
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  getEmployeeById,
+  getAllEmployees,
 };

@@ -1,4 +1,3 @@
-// models/Issue.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -19,12 +18,16 @@ const IssueSchema = new Schema({
     required: [true, 'deviceNames là bắt buộc'],  
     validate: {
       validator: function(value) {
-        
         return value.length > 0 && value.every(item => typeof item === 'string');
       },
       message: 'deviceNames phải là mảng và chứa các chuỗi hợp lệ',
     }
   },
+  deviceStatus: {
+    type: String,
+    required: [true, 'deviceStatus là bắt buộc'],
+       default: 'active'  // Giá trị mặc định là 'active'
+  }
 });
 
 module.exports = mongoose.model('Issue', IssueSchema);

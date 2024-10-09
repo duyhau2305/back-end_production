@@ -24,6 +24,7 @@ async function createIssue(data) {
       reasonCode: data.reasonCode,
       reasonName: data.reasonName,
       deviceNames: data.deviceNames, 
+      deviceStatus: data.deviceStatus
     });
 
     
