@@ -26,7 +26,7 @@ const IssueSchema = new Schema({
   deviceStatus: {
     type: String,
     required: [true, 'deviceStatus là bắt buộc'],
-       default: 'active'  // Giá trị mặc định là 'active'
+       default: 'active'  
   }
 });
 

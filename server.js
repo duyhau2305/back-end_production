@@ -12,6 +12,7 @@ const deviceStatusRoute = require('./routes/DeviceStatusRoute');
 const issueRouters =require('./routes/IssueRouter');
 const  employeeRoutes =require('./routes/EmployeeRoutes');
 const workShiftRoutes = require('./routes/WorkShiftRoutes')
+const productionTasktRoutes = require('./routes/ProductionTaskRouter')
 const path = require('path');
 
 dotenv.config(); 
@@ -41,14 +42,8 @@ app.use('/api/areas', areaRoutes);
 app.use('/api/device', deviceRouters)
 app.use('/api/issue', issueRouters)
 app.use('/api/employees', employeeRoutes);
-app.use('/api/workShifts', workShiftRoutes);
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, '../frontend/build')));
-
-// Handle all other requests and send back React app
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
-});
+app.use('/api/workShifts', workShiftRoutes); 
+app.use('/api/productiontask', productionTasktRoutes); 
 
 app.listen(PORT, '0.0.0.0', () => {
   const ipAddress = getIPAddress();

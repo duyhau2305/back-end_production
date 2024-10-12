@@ -9,7 +9,7 @@ router.post('/admin/create', userController.createAdminUser);
 
 router.post('/login', userController.loginUser);
 
-// Route get info user by ID ( require Admin)
+
 router.get('/users/:id', authMiddleware, userController.getUserById);
 
 

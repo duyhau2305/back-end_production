@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const userService = require('../services/UserService');
 const User = require('../models/User');
 
-// Create user
+
 const createAdminUser = async (req, res) => {
     try {
         const adminUser = await userService.createAdminUser(req.body);

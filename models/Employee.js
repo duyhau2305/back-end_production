@@ -14,7 +14,7 @@ const EmployeeSchema = new Schema({
   },
   areaName: {
     type: String,
-    required: [true, 'Tổ là bắt buộc'],
+    required: [true, 'Khu vực là bắt buộc'],
   },
 }, { timestamps: true });
 
