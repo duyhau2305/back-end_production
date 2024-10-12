@@ -4,6 +4,7 @@ const axios = require('axios');
 const connectDB = require('./config/db'); 
 const cors = require('cors');
 const os = require('os');
+const moment = require('moment');
 const dotenv = require('dotenv');
 const userRouters = require('./routes/UserRoutes');
 const  areaRoutes =require('./routes/AreaRouter');
@@ -13,7 +14,11 @@ const issueRouters =require('./routes/IssueRouter');
 const  employeeRoutes =require('./routes/EmployeeRoutes');
 const workShiftRoutes = require('./routes/WorkShiftRoutes')
 const productionTasktRoutes = require('./routes/ProductionTaskRouter')
-const path = require('path');
+const deviceId = '543ff470-54c6-11ef-8dd4-b74d24d26b24';
+const startDate = moment().format('YYYY-MM-DD');
+const endDate = moment().format('YYYY-MM-DD');
+const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
+const dailyStatusService = require('./services/DailyStatusService');
 
 dotenv.config(); 
 
@@ -36,6 +41,23 @@ const getIPAddress = () => {
 
 connectDB();
 
+//recorData
+const recordTelemetryData = async () => {
+  try {
+    console.log('Fetching telemetry data...');
+    await dailyStatusService.processTelemetryData(deviceId, startDate, endDate);
+    console.log('Telemetry data saved successfully');
+  } catch (error) {
+    console.error('Error recording telemetry data:', error.message);
+  }
+};
+recordTelemetryData();
+setInterval(() => {
+  recordTelemetryData();
+}, 10 * 60 * 1000); 
+
+
+app.use('/api', dailyStatusRoutes);
 app.use('/api/device-status', deviceStatusRoute);
 app.use('/api', userRouters);
 app.use('/api/areas', areaRoutes);

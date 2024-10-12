@@ -1,4 +1,4 @@
-// controllers/deviceController.js
+
 const Area = require('../models/Area'); // Import bảng Area
 const deviceService = require('../services/DeviceService');
 
