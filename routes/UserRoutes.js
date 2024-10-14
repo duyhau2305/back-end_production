@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const os = require('os');
 const userController = require('../controller/UserController');
-const { authMiddleware, adminMiddleware } = require('../middlewares/AuthMiddleware');
+const { authMiddleware, adminMiddleware } = require('../middlewares/authMiddleware');
 
 // Route  create adminuser
 router.post('/admin/create', userController.createAdminUser);
