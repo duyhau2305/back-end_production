@@ -1,21 +1,20 @@
-const dailyStatusService = require('../services/DailyStatusService');
+const { getTelemetryDataFromMongoDB } = require('../services/DailyStatusService');
 
-
-const getTelemetry = async (req, res) => {
+// Controller để xử lý yêu cầu lấy dữ liệu từ MongoDB
+const getTelemetryData = async (req, res) => {
   const { deviceId, startDate, endDate } = req.query;
 
-  if (!deviceId || !startDate || !endDate) {
-    return res.status(400).json({ error: 'Missing parameters: deviceId, startDate, endDate' });
-  }
-
   try {
-    const data = await dailyStatusService.processTelemetryData(deviceId, startDate, endDate);
-    res.json(data);
+    // Gọi service để lấy dữ liệu từ MongoDB
+    const data = await getTelemetryDataFromMongoDB(deviceId, startDate, endDate);
+    // Trả về dữ liệu cho client
+    res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    // Nếu không tìm thấy dữ liệu hoặc có lỗi, trả về lỗi
+    res.status(404).json({ error: error.message });
   }
 };
 
 module.exports = {
-  getTelemetry,
+  getTelemetryData,
 };

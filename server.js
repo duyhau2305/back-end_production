@@ -1,6 +1,9 @@
 // Import các thư viện cần thiết
 const express = require('express');
 const axios = require('axios');
+const cron = require('node-cron');
+const { getTelemetryDataFromTB , loginAndGetAccessToken } = require('./services/ThingboardService');
+const { processAndSaveTelemetryData } = require('./services/TelemetryProcessingService');
 const connectDB = require('./config/db'); 
 const cors = require('cors');
 const os = require('os');
@@ -14,7 +17,7 @@ const issueRouters =require('./routes/IssueRouter');
 const  employeeRoutes =require('./routes/EmployeeRoutes');
 const workShiftRoutes = require('./routes/WorkShiftRoutes')
 const productionTasktRoutes = require('./routes/ProductionTaskRouter')
-const deviceId = '543ff470-54c6-11ef-8dd4-b74d24d26b24';
+
 const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
@@ -41,21 +44,35 @@ const getIPAddress = () => {
 
 connectDB();
 
-//recorData
-const recordTelemetryData = async () => {
+
+const fetchAndSaveTelemetryData = async () => {
   try {
-    console.log('Fetching telemetry data...');
-    await dailyStatusService.processTelemetryData(deviceId, startDate, endDate);
+    console.log('Fetching and saving telemetry data...');
+    
+    const deviceId = '543ff470-54c6-11ef-8dd4-b74d24d26b24';
+    const startDate = Date.now() - 365 * 24 * 60 * 60 * 1000; // Lấy dữ liệu trong vòng 1 năm
+    const endDate = Date.now(); // Thời điểm hiện tại
+
+    // Đăng nhập và lấy token trước khi gọi API
+    const accessToken = await loginAndGetAccessToken();
+
+    // Gọi API lấy dữ liệu từ ThingBoard sử dụng token vừa nhận
+    const telemetryData = await getTelemetryDataFromTB(deviceId, startDate, endDate, accessToken);
+
+    // Xử lý và lưu dữ liệu vào MongoDB
+    await processAndSaveTelemetryData(deviceId, telemetryData);
+
     console.log('Telemetry data saved successfully');
   } catch (error) {
-    console.error('Error recording telemetry data:', error.message);
+    console.error('Failed to fetch and save telemetry data:', error.message);
   }
 };
-recordTelemetryData();
-setInterval(() => {
-  recordTelemetryData();
-}, 10 * 60 * 1000); 
 
+
+cron.schedule('0 * * * *', fetchAndSaveTelemetryData);
+
+
+fetchAndSaveTelemetryData(); 
 
 app.use('/api', dailyStatusRoutes);
 app.use('/api/device-status', deviceStatusRoute);

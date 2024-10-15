@@ -1,9 +1,8 @@
 const express = require('express');
-const dailyStatusController = require('../controller/DailyStatusController');
-
 const router = express.Router();
+const { getTelemetryData } = require('../controller/DailyStatusController');
 
-// Get Data fomatted from ThingBoard
-router.get('/telemetry', dailyStatusController.getTelemetry);
+// Route để lấy dữ liệu từ MongoDB
+router.get('/telemetry', getTelemetryData);
 
 module.exports = router;

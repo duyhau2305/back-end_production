@@ -10,9 +10,12 @@ const TaskShiftSchema = new Schema({
   status: {
     type: String,
     required: true,
-    enum: ['Pending', 'Active', 'Completed', 'Cancelled'], // Các trạng thái của ca làm việc
     default: 'Pending'
-  }
+  },
+  employeeName: { 
+    type: [String], 
+    required: true 
+  },
 });
 
 // Schema cho ProductionTask
@@ -25,10 +28,7 @@ const ProductionTaskSchema = new Schema({
     type: String, 
     required: true 
   },
-  employeeName: { 
-    type: String, 
-    required: true 
-  },
+  
   shifts: [TaskShiftSchema] 
 }, { timestamps: true });
 
