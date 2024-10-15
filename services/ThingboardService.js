@@ -4,7 +4,7 @@ const THINGBOARD_API_URL = 'http://cloud.datainsight.vn:8080';
 const USERNAME = 'oee2024@gmail.com';
 const PASSWORD = 'Oee@2124';
 
-// Hàm đăng nhập để lấy access token từ ThingBoard
+
 const loginAndGetAccessToken = async () => {
   try {
     const response = await axios.post(`${THINGBOARD_API_URL}/api/auth/login`, {
@@ -12,7 +12,7 @@ const loginAndGetAccessToken = async () => {
       password: PASSWORD,
     });
     const accessToken = response.data.token;
-    console.log('Access token received:', accessToken); // Log để kiểm tra token
+    console.log('Access token received:', accessToken); 
     return accessToken;
   } catch (error) {
     console.error('Failed to get access token:', error.message);
@@ -20,7 +20,7 @@ const loginAndGetAccessToken = async () => {
   }
 };
 
-// Hàm gọi API lấy dữ liệu telemetry từ ThingBoard
+
 const getTelemetryDataFromTB = async (deviceId, startDate, endDate, accessToken) => {
   try {
     const response = await axios.get(
