@@ -4,15 +4,10 @@ const Device = require('../models/Device');
 const productionTaskService = require('../services/ProductionTaskService');
 
 async function createProductionTask(req, res) {
-  const { shifts, employeeName, deviceName } = req.body;
+  const { shifts, deviceName } = req.body;
+  console.log(req.body);
 
   try {
-    
-    const existingEmployee = await Employee.findOne({ employeeName: new RegExp(`^${employeeName}$`, "i") });
-    if (!existingEmployee) {
-      return res.status(400).json({ message: `Nhân viên ${employeeName} không tồn tại. Vui lòng chọn nhân viên hợp lệ.` });
-    }
-
     
     const existingDevice = await Device.findOne({ deviceName: new RegExp(`^${deviceName}$`, "i") });
     if (!existingDevice) {
@@ -22,11 +17,26 @@ async function createProductionTask(req, res) {
     
     const shiftErrors = [];
     const validShifts = await Promise.all(shifts.map(async (shift) => {
+     
       const existingShift = await Shift.findOne({ shiftName: new RegExp(`^${shift.shiftName}$`, "i") });
       if (!existingShift) {
         shiftErrors.push(`Ca làm việc ${shift.shiftName} không tồn tại.`);
       }
-      return { shiftName: shift.shiftName, status: shift.status };
+
+     
+      const employeeErrors = [];
+      await Promise.all(shift.employeeName.map(async (name) => {
+        const existingEmployee = await Employee.findOne({ employeeName: new RegExp(`^${name}$`, "i") });
+        if (!existingEmployee) {
+          employeeErrors.push(`Nhân viên ${name} không tồn tại.`);
+        }
+      }));
+
+      if (employeeErrors.length > 0) {
+        shiftErrors.push(`Ca làm việc ${shift.shiftName} có lỗi: ${employeeErrors.join(', ')}`);
+      }
+
+      return { shiftName: shift.shiftName, status: shift.status, employeeName: shift.employeeName };
     }));
 
     if (shiftErrors.length > 0) {
@@ -37,7 +47,6 @@ async function createProductionTask(req, res) {
     const productionTaskData = {
       date: req.body.date,
       deviceName: existingDevice.deviceName,
-      employeeName: existingEmployee.employeeName,
       shifts: validShifts 
     };
 
@@ -49,40 +58,47 @@ async function createProductionTask(req, res) {
 }
 
 async function updateProductionTask(req, res) {
-  const { shifts, employeeName, deviceName } = req.body;
+  const { shifts, deviceName } = req.body;
 
   try {
-   
-    const existingEmployee = await Employee.findOne({ employeeName: new RegExp(`^${employeeName}$`, "i") });
-    if (!existingEmployee) {
-      return res.status(400).json({ message: `Nhân viên ${employeeName} không tồn tại. Vui lòng chọn nhân viên hợp lệ.` });
-    }
-
     
     const existingDevice = await Device.findOne({ deviceName: new RegExp(`^${deviceName}$`, "i") });
     if (!existingDevice) {
       return res.status(400).json({ message: `Thiết bị ${deviceName} không tồn tại. Vui lòng chọn thiết bị hợp lệ.` });
     }
 
-   
     const shiftErrors = [];
     const validShifts = await Promise.all(shifts.map(async (shift) => {
+      
       const existingShift = await Shift.findOne({ shiftName: new RegExp(`^${shift.shiftName}$`, "i") });
       if (!existingShift) {
         shiftErrors.push(`Ca làm việc ${shift.shiftName} không tồn tại.`);
       }
-      return { shiftName: shift.shiftName, status: shift.status };
+
+      
+      const employeeErrors = [];
+      await Promise.all(shift.employeeName.map(async (name) => {
+        const existingEmployee = await Employee.findOne({ employeeName: new RegExp(`^${name}$`, "i") });
+        if (!existingEmployee) {
+          employeeErrors.push(`Nhân viên ${name} không tồn tại.`);
+        }
+      }));
+
+      if (employeeErrors.length > 0) {
+        shiftErrors.push(`Ca làm việc ${shift.shiftName} có lỗi: ${employeeErrors.join(', ')}`);
+      }
+
+      return { shiftName: shift.shiftName, status: shift.status, employeeName: shift.employeeName };
     }));
 
     if (shiftErrors.length > 0) {
       return res.status(400).json({ message: shiftErrors.join(', ') });
     }
 
-    
+   
     const productionTaskData = {
       date: req.body.date,
       deviceName: existingDevice.deviceName,
-      employeeName: existingEmployee.employeeName,
       shifts: validShifts 
     };
 

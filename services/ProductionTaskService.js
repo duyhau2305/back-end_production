@@ -1,31 +1,31 @@
 const ProductionTask = require('../models/ProductionTask');
 
-class ProductionTaskService {
-
+const productionTaskService = {
   async createProductionTask(data) {
-    const task = new ProductionTask(data);
-    return await task.save();
-  }
+    const productionTask = new ProductionTask(data);
+    return await productionTask.save();
+  },
 
-  
   async updateProductionTask(id, data) {
     return await ProductionTask.findByIdAndUpdate(id, data, { new: true });
-  }
+  },
 
-  
   async deleteProductionTask(id) {
     return await ProductionTask.findByIdAndDelete(id);
-  }
+  },
 
-  
   async getAllProductionTasks() {
     return await ProductionTask.find();
-  }
+  },
 
-  
   async getProductionTaskById(id) {
     return await ProductionTask.findById(id);
-  }
-}
+  },
 
-module.exports = new ProductionTaskService();
+  
+  async findTaskByDeviceName(deviceName) {
+    return await ProductionTask.findOne({ deviceName: new RegExp(`^${deviceName}$`, "i") });
+  }
+};
+
+module.exports = productionTaskService;
