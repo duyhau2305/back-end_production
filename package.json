@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node --max-old-space-size=8192 server.js",
+    "start": "nodemon --max-old-space-size=8192 server.js",
     "build": "echo 'No build step required'"
   },
   "dependencies": {
