@@ -1,18 +1,30 @@
+const Area = require('../models/Area'); // Import Area model
+const deviceService = require('../services/DeviceService'); // Import Device Service
 
-const Area = require('../models/Area'); // Import bảng Area
-const deviceService = require('../services/DeviceService');
-
+// Create a device
 async function createDevice(req, res) {
-  const { areaName } = req.body; 
+  const { areaName, deviceId } = req.body; // Ensure case matches your request body
+  console.log('Request Body:', req.body); // Log the request body for debugging
+
+  // Check if deviceId is provided
+  if (!deviceId) {
+    return res.status(400).json({ message: 'Thiết bị ID không được để trống.' });
+  }
 
   try {
-    
+    // Check if the area exists
     const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, "i") });
     if (!existingArea) {
       return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
     }
 
-   
+    // Check for existing device by deviceId to avoid duplicates
+    const existingDevice = await deviceService.getDeviceById(deviceId);
+    if (existingDevice) {
+      return res.status(400).json({ message: `Thiết bị với ID ${deviceId} đã tồn tại.` });
+    }
+
+    // Create the device
     const device = await deviceService.createDevice(req.body);
     res.status(201).json(device);
   } catch (err) {
@@ -21,9 +33,14 @@ async function createDevice(req, res) {
 }
 
 
+
+// Update a device
 async function updateDevice(req, res) {
+  const { id } = req.params;
+
   try {
-    const device = await deviceService.updateDevice(req.params.id, req.body);
+    // Update the device using the service
+    const device = await deviceService.updateDevice(id, req.body);
     if (!device) {
       return res.status(404).json({ message: 'Thiết bị không tồn tại' });
     }
@@ -33,9 +50,13 @@ async function updateDevice(req, res) {
   }
 }
 
+// Delete a device
 async function deleteDevice(req, res) {
+  const { id } = req.params;
+
   try {
-    const device = await deviceService.deleteDevice(req.params.id);
+    // Delete the device using the service
+    const device = await deviceService.deleteDevice(id);
     if (!device) {
       return res.status(404).json({ message: 'Thiết bị không tồn tại' });
     }
@@ -45,9 +66,13 @@ async function deleteDevice(req, res) {
   }
 }
 
+// Get a device by ID
 async function getDeviceById(req, res) {
+  const { id } = req.params;
+
   try {
-    const device = await deviceService.getDeviceById(req.params.id);
+    // Retrieve the device by ID using the service
+    const device = await deviceService.getDeviceById(id);
     if (!device) {
       return res.status(404).json({ message: 'Thiết bị không tồn tại' });
     }
@@ -57,8 +82,10 @@ async function getDeviceById(req, res) {
   }
 }
 
+// Get all devices
 async function getAllDevices(req, res) {
   try {
+    // Retrieve all devices using the service
     const devices = await deviceService.getAllDevices();
     res.status(200).json(devices);
   } catch (err) {
@@ -66,10 +93,11 @@ async function getAllDevices(req, res) {
   }
 }
 
+// Export the controller functions
 module.exports = {
   createDevice,
   updateDevice,
   deleteDevice,
   getDeviceById,
-  getAllDevices
+  getAllDevices,
 };
