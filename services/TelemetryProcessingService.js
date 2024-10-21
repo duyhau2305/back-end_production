@@ -2,10 +2,13 @@ const moment = require('moment');
 const _ = require('lodash');
 const DailyStatus = require('../models/DailyStatus');
 
+// Hợp nhất các khoảng thời gian liên tiếp có cùng trạng thái
 const mergeIntervals = (intervals) => {
   if (!intervals || intervals.length === 0) return [];
 
-  const sortedIntervals = _.sortBy(intervals, interval => moment(interval.startTime, 'HH:mm'));
+  const sortedIntervals = _.sortBy(intervals, (interval) =>
+    moment(interval.startTime, 'YYYY-MM-DD HH:mm:ss')
+  );
 
   const merged = [];
   let currentInterval = sortedIntervals[0];
@@ -13,18 +16,18 @@ const mergeIntervals = (intervals) => {
   for (let i = 1; i < sortedIntervals.length; i++) {
     const nextInterval = sortedIntervals[i];
 
-    // Kiểm tra trạng thái có giống nhau không và thời gian kết thúc có gần với thời gian bắt đầu của nextInterval không
-    if (currentInterval.status === nextInterval.status &&
-        (moment(currentInterval.endTime, 'HH:mm').isSameOrAfter(moment(nextInterval.startTime, 'HH:mm')) ||
-         moment(currentInterval.endTime, 'HH:mm').isSame(moment(nextInterval.startTime, 'HH:mm')))) {
-
-      // Hợp nhất các khoảng thời gian nếu cùng trạng thái và gần nhau
+    if (
+      currentInterval.status === nextInterval.status &&
+      moment(currentInterval.endTime, 'YYYY-MM-DD HH:mm:ss').isSameOrAfter(
+        moment(nextInterval.startTime, 'YYYY-MM-DD HH:mm:ss')
+      )
+    ) {
+      // Gộp các khoảng thời gian nếu trạng thái giống nhau và liên tục
       currentInterval.endTime = moment.max(
-        moment(currentInterval.endTime, 'HH:mm'),
-        moment(nextInterval.endTime, 'HH:mm')
-      ).format('HH:mm');
+        moment(currentInterval.endTime, 'YYYY-MM-DD HH:mm:ss'),
+        moment(nextInterval.endTime, 'YYYY-MM-DD HH:mm:ss')
+      ).format('YYYY-MM-DD HH:mm:ss');
     } else {
-      // Đẩy interval hiện tại vào danh sách merged và chuyển sang interval tiếp theo
       merged.push(currentInterval);
       currentInterval = nextInterval;
     }
@@ -34,48 +37,99 @@ const mergeIntervals = (intervals) => {
   return merged;
 };
 
-const processAndSaveTelemetryData = async (deviceId, telemetryData) => {
-  try {
-    const processedData = telemetryData
-      .filter(item => item.value === '1' || item.value === '0') // Chỉ xử lý '1' (Chạy) và '0' (Dừng)
-      .map((item) => ({
-        date: moment(item.ts).format('YYYY-MM-DD'),
+// Xử lý dữ liệu telemetry từ ThingsBoard và lưu vào MongoDB
+const processAndSaveTelemetryData = (deviceId, telemetryData) => {
+  return new Promise((resolve, reject) => {
+    try {
+      // Kiểm tra nếu telemetryData không tồn tại
+      if (!telemetryData) {
+        console.warn(`No telemetry data returned for device: ${deviceId}`);
+        return resolve(); // Bỏ qua nếu không có dữ liệu
+      }
+
+      // Lấy dữ liệu 'status' hoặc dùng mảng rỗng nếu không có
+      const telemetryStatus = telemetryData.status || [];
+
+      // Kiểm tra xem 'status' có phải là mảng và không rỗng
+      if (!Array.isArray(telemetryStatus) || telemetryStatus.length === 0) {
+        console.warn(`Invalid telemetry format or no data for device: ${deviceId}`);
+        return resolve(); // Bỏ qua nếu không có dữ liệu hợp lệ
+      }
+
+      // Xử lý dữ liệu thành các khoảng thời gian
+      const processedData = telemetryStatus.map(({ ts, value }) => ({
+        timestamp: moment(ts), // Chuyển 'ts' thành moment object
+        date: moment(ts).format('YYYY-MM-DD'),
         deviceId,
-        status: item.value === '1' ? 'Chạy' : 'Dừng',
-        startTime: moment(item.ts).format('HH:mm'),
-        endTime: moment(item.ts).add(5, 'minutes').format('HH:mm'), // Thêm 5 phút cho thời gian kết thúc
+        status: value === '1' ? 'Chạy' : 'Dừng',
+        startTime: moment(ts).format('YYYY-MM-DD HH:mm:ss'),
+        endTime: moment(ts).format('YYYY-MM-DD HH:mm:ss'),
       }));
 
-    const groupedData = _(processedData)
-      .groupBy('date')
-      .toPairs()
-      .sortBy(([date]) => moment(date, 'YYYY-MM-DD'))
-      .fromPairs()
-      .value();
+      // Sắp xếp dữ liệu theo thời gian
+      const sortedData = _.sortBy(processedData, 'timestamp');
 
-    const promises = Object.keys(groupedData).map(async (date) => {
-      const mergedIntervals = mergeIntervals(groupedData[date]);
+      // Tạo các khoảng thời gian liên tiếp
+      const intervals = [];
+      let currentInterval = sortedData[0];
 
-      const existingRecord = await DailyStatus.findOne({ deviceId, date });
-      if (existingRecord) {
-        existingRecord.intervals = mergedIntervals;
-        await existingRecord.save();
-      } else {
-        const newDailyStatus = new DailyStatus({
-          deviceId,
-          date,
-          intervals: mergedIntervals,
-        });
-        await newDailyStatus.save();
+      for (let i = 1; i < sortedData.length; i++) {
+        const current = sortedData[i];
+
+        if (current.status !== currentInterval.status) {
+          intervals.push(currentInterval); // Thêm khoảng hiện tại
+          currentInterval = current; // Bắt đầu khoảng mới
+        } else {
+          currentInterval.endTime = current.endTime; // Cập nhật endTime nếu trạng thái không thay đổi
+        }
       }
-    });
 
-    await Promise.all(promises);
-  } catch (error) {
-    console.error('Error processing and saving telemetry data:', error);
-    throw new Error('Error saving telemetry data');
-  }
+      intervals.push(currentInterval); // Thêm khoảng cuối cùng
+
+      // Nhóm các khoảng theo ngày
+      const groupedData = _(intervals)
+        .groupBy('date')
+        .toPairs()
+        .sortBy(([date]) => moment(date, 'YYYY-MM-DD'))
+        .fromPairs()
+        .value();
+
+      // Lưu dữ liệu vào MongoDB
+      const promises = Object.keys(groupedData).map((date) => {
+        const mergedIntervals = mergeIntervals(groupedData[date]);
+
+        return DailyStatus.findOne({ deviceId, date })
+          .then((existingRecord) => {
+            if (existingRecord) {
+              existingRecord.intervals = mergedIntervals;
+              return existingRecord.save();
+            } else {
+              const newDailyStatus = new DailyStatus({
+                deviceId,
+                date,
+                intervals: mergedIntervals,
+              });
+              return newDailyStatus.save();
+            }
+          });
+      });
+
+      Promise.all(promises)
+        .then(() => {
+          console.log(`Telemetry data for device ${deviceId} saved successfully`);
+          resolve();
+        })
+        .catch((error) => {
+          console.error('Error saving telemetry data:', error);
+          reject(new Error('Error saving telemetry data'));
+        });
+    } catch (error) {
+      console.error('Error processing telemetry data:', error);
+      reject(new Error('Error processing telemetry data'));
+    }
+  });
 };
+
 
 module.exports = {
   processAndSaveTelemetryData,
