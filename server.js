@@ -18,6 +18,7 @@ const  employeeRoutes =require('./routes/EmployeeRoutes');
 const workShiftRoutes = require('./routes/WorkShiftRoutes')
 const productionTasktRoutes = require('./routes/ProductionTaskRouter')
 const dailySummaryRouter =require('./routes/DailySummaryRoutes')
+const downtimeRoute = require('./routes/DowntimeRoute')
 
 const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
@@ -56,7 +57,7 @@ const fetchAndSaveTelemetryData = async () => {
       'a7f6e950-5a68-11ef-8dd4-b74d24d26b24',
       'db8d2550-db6e-11ee-87ab-f7f4ba6ad581'
     ];
-    const startDate = Date.now() - 3 * 24 * 60 * 60 * 1000; // Lấy dữ liệu trong vòng 3 ngay
+    const startDate = Date.now() - 45 * 24 * 60 * 60 * 1000; // Lấy dữ liệu trong vòng 1 năm
     const endDate = Date.now(); // Thời điểm hiện tại
 
     // Đăng nhập và lấy token trước khi gọi API
@@ -98,7 +99,8 @@ app.use('/api/issue', issueRouters)
 app.use('/api/employees', employeeRoutes);
 app.use('/api/workShifts', workShiftRoutes); 
 app.use('/api/productiontask', productionTasktRoutes); 
-// app.use('/api/daily-summary', dailySummaryRouter);
+app.use('/api/daily-summary', dailySummaryRouter);
+app.use('/api/downtime',downtimeRoute)
 
 
 app.listen(PORT, '0.0.0.0', () => {
