@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const downtimeSchema = new mongoose.Schema({
-  deviceID: { type: String, required: true },
+  deviceId: { type: String, required: true },
   deviceName: { type: String, required: true },
   date: { type: Date, required: true },
   interval: [
