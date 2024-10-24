@@ -1,19 +1,11 @@
 const Downtime = require('../models/Downtime');
 
 // Lọc downtime với deviceID và khoảng thời gian (startDate - endDate)
-const getDowntimesByFilter = async (deviceID, startDate, endDate) => {
-  const filter = {};
-
-  if (deviceID) filter.deviceID = deviceID;
-  
-  if (startDate && endDate) {
-    filter.date = { 
-      $gte: new Date(startDate), 
-      $lte: new Date(endDate) 
-    };
-  }
-
-  return await Downtime.find(filter);
+const getDowntimesByFilter = async (deviceId, start, end) => {
+  return await Downtime.find({
+    deviceId: deviceId,
+    date: { $gte: start, $lte: end }
+  }).exec();
 };
 
 // Tạo downtime mới

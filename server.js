@@ -57,7 +57,7 @@ const fetchAndSaveTelemetryData = async () => {
       'a7f6e950-5a68-11ef-8dd4-b74d24d26b24',
       'db8d2550-db6e-11ee-87ab-f7f4ba6ad581'
     ];
-    const startDate = Date.now() - 45 * 24 * 60 * 60 * 1000; // Lấy dữ liệu trong vòng 1 năm
+    const startDate = Date.now() - 30 * 24 * 60 * 60 * 1000; 
     const endDate = Date.now(); // Thời điểm hiện tại
 
     // Đăng nhập và lấy token trước khi gọi API

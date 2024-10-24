@@ -3,7 +3,7 @@ const DailyStatus = require('../models/DailyStatus');
 // Lấy dữ liệu từ MongoDB theo deviceId và khoảng thời gian
 const getTelemetryDataFromMongoDB = async (deviceId, startDate, endDate) => {
   try {
-    console.log(`Raw telemetry data for ${deviceId}:`, JSON.stringify(telemetryData, null, 2));
+    
     // Tìm dữ liệu trong MongoDB theo deviceId và ngày
     const existingData = await DailyStatus.find({
       deviceId,

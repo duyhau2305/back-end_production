@@ -3,13 +3,18 @@ const downtimeService = require('../services/DowntimeService');
 // Lấy downtime với bộ lọc deviceID và khoảng thời gian
 const getDowntimesByFilter = async (req, res) => {
   try {
-    const { deviceID, startDate, endDate } = req.query; // Lấy query parameters
-    const downtimes = await downtimeService.getDowntimesByFilter(deviceID, startDate, endDate);
+    const { deviceId, startDate, endDate } = req.query;
+
+    const start = new Date(`${startDate}T00:00:00Z`);
+    const end = new Date(`${endDate}T23:59:59Z`); // Bao phủ toàn bộ ngày
+
+    const downtimes = await downtimeService.getDowntimesByFilter(deviceId, start, end);
     res.status(200).json(downtimes);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Tạo downtime mới
 const createDowntime = async (req, res) => {
