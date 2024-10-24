@@ -3,7 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const cron = require('node-cron');
 const { getTelemetryDataFromTB , loginAndGetAccessToken } = require('./services/ThingboardService');
-const { processAndSaveTelemetryData } = require('./services/TelemetryProcessingService');
+const { processAndSaveTelemetryData, caculateData } = require('./services/TelemetryProcessingService');
 const connectDB = require('./config/db'); 
 const cors = require('cors');
 const os = require('os');
@@ -22,6 +22,10 @@ const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
 const dailyStatusService = require('./services/DailyStatusService');
+const WorkshiftsR = require('./models/WorkshiftsR');
+const AvailabilityRealtime = require('./models/AvailabilityRealtime');
+const AvailabilityHour = require('./models/AvailabilityHour');
+const AvailabilityDay = require('./models/AvailabilityDay');
 
 dotenv.config(); 
 
@@ -45,34 +49,60 @@ const getIPAddress = () => {
 connectDB();
 
 
-const fetchAndSaveTelemetryData = async () => {
+const fetchAndSaveTelemetryDataType = async (type) => {
   try {
     console.log('Fetching and saving telemetry data...');
-    
-    const deviceId = '543ff470-54c6-11ef-8dd4-b74d24d26b24';
-    const startDate = Date.now() - 365 * 24 * 60 * 60 * 1000; // Lấy dữ liệu trong vòng 1 năm
-    const endDate = Date.now(); // Thời điểm hiện tại
+    const now = new Date();
+    let startOfDay; 
+    let endDate;
+    if(type == 'day'){
+      console.log(startOfDay)
 
-    // Đăng nhập và lấy token trước khi gọi API
+      startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = now.getTime();
+    }else if(type == '1h'){
+      startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()-1, 0, 0, 0);
+      endDate = now.getTime();
+    }else{
+      startOfDay = new Date(now.getTime() - 15 * 60 * 1000);
+
+      endDate = now.getTime() - now.getMinutes()*60*1000;
+    }
+    const deviceId = '543ff470-54c6-11ef-8dd4-b74d24d26b24';
     const accessToken = await loginAndGetAccessToken();
 
-    // Gọi API lấy dữ liệu từ ThingBoard sử dụng token vừa nhận
-    const telemetryData = await getTelemetryDataFromTB(deviceId, startDate, endDate, accessToken);
-
-    // Xử lý và lưu dữ liệu vào MongoDB
-    await processAndSaveTelemetryData(deviceId, telemetryData);
-
+    let telemetryData = await getTelemetryDataFromTB(deviceId, startOfDay.getTime(), endDate, accessToken);
+    await processAndSaveTelemetryData(deviceId, telemetryData , type);
     console.log('Telemetry data saved successfully');
   } catch (error) {
     console.error('Failed to fetch and save telemetry data:', error.message);
   }
 };
 
+function scheduleTask(interval) {
 
-cron.schedule('0 * * * *', fetchAndSaveTelemetryData);
+  let cronExpression = '';
 
+  if (interval === '15min') {
+      cronExpression = '*/15 * * * *'; // Mỗi 15 phút
+  } else if (interval === '1h') {
+      cronExpression = '0 * * * *'; // Mỗi giờ (vào phút thứ 0)
+  } else if (interval === 'day') {
+      cronExpression = '0 0 * * *'; // Mỗi ngày (vào 00:00 giờ)
+  } else {
+      throw new Error('Invalid interval provided');
+  }
 
-fetchAndSaveTelemetryData(); 
+  cron.schedule(cronExpression, () => {
+    fetchAndSaveTelemetryDataType(interval);
+  });
+}
+fetchAndSaveTelemetryDataType('1h')
+
+scheduleTask('15min'); 
+scheduleTask('1h'); 
+scheduleTask('day');
+
 
 app.use('/api', dailyStatusRoutes);
 app.use('/api/device-status', deviceStatusRoute);
