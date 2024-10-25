@@ -48,29 +48,6 @@ const getIPAddress = () => {
 
 connectDB();
 
-const fetchAndSaveTelemetryData = async () => {
-  try {
-    console.log('Fetching and saving telemetry data...');
-
-    // Danh sách các deviceId cần lấy dữ liệu
-    const deviceIds = [
-      '543ff470-54c6-11ef-8dd4-b74d24d26b24',
-      'a7f6e950-5a68-11ef-8dd4-b74d24d26b24',
-      'db8d2550-db6e-11ee-87ab-f7f4ba6ad581'
-    ];
-    const startDate = Date.now() - 45 * 24 * 60 * 60 * 1000; // Lấy dữ liệu trong vòng 1 năm
-    const endDate = Date.now(); // Thời điểm hiện tại
-
-    // Đăng nhập và lấy token trước khi gọi API
-    const accessToken = await loginAndGetAccessToken();
-
-    let telemetryData = await getTelemetryDataFromTB(deviceId, startOfDay.getTime(), endDate, accessToken);
-    await processAndSaveTelemetryData(deviceId, telemetryData , 'day');
-    console.log('Telemetry data saved successfully');
-  } catch (error) {
-    console.error('Failed to fetch and save telemetry data:', error.message);
-  }
-};
 const fetchAndSaveTelemetryDataType = async (type) => {
   try {
     console.log('Fetching and saving telemetry data...');
@@ -124,7 +101,7 @@ scheduleTask('15min');
 scheduleTask('1h'); 
 scheduleTask('day');
 
-fetchAndSaveTelemetryData()
+
 
 app.use('/api', dailyStatusRoutes);
 app.use('/api/device-status', deviceStatusRoute);
