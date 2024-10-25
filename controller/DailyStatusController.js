@@ -275,4 +275,7 @@ module.exports = {
   getDataTotalDeviceStatus,
   updateTask,
   getProcessDevice
+  getDataTotalDeviceStatus,
+  updateTask,
+  getProcessDevice
 };

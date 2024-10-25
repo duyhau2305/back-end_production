@@ -307,19 +307,23 @@ const processAndSaveTelemetryData = async (deviceId, telemetryData , type) => {
       const existingRecord = await DailyStatus.findOne({ deviceId, date });
       if (existingRecord) {
         existingRecord.intervals = result;
+        existingRecord.intervals = result;
         await existingRecord.save();
       } else {
         const newDailyStatus = new DailyStatus({
           deviceId,
           date,
           intervals: result,
+          intervals: result,
         });
         await newDailyStatus.save();
       }
     
+    
   } catch (error) {
     console.error('Error processing and saving telemetry data:', error);
     throw new Error('Error saving telemetry data');
+  }
   }
   }
 };

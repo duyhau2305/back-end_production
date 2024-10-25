@@ -1,8 +1,8 @@
-// Import các thư viện cần thiết
 const express = require('express');
 const axios = require('axios');
 const cron = require('node-cron');
 const { getTelemetryDataFromTB , loginAndGetAccessToken } = require('./services/ThingboardService');
+const { processAndSaveTelemetryData, caculateData } = require('./services/TelemetryProcessingService');
 const { processAndSaveTelemetryData, caculateData } = require('./services/TelemetryProcessingService');
 const connectDB = require('./config/db'); 
 const cors = require('cors');
@@ -17,11 +17,16 @@ const issueRouters =require('./routes/IssueRouter');
 const  employeeRoutes =require('./routes/EmployeeRoutes');
 const workShiftRoutes = require('./routes/WorkShiftRoutes')
 const productionTasktRoutes = require('./routes/ProductionTaskRouter')
+const downtimeRoute = require('./routes/DowntimeRoute')
 
 const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
 const dailyStatusService = require('./services/DailyStatusService');
+const WorkshiftsR = require('./models/WorkshiftsR');
+const AvailabilityRealtime = require('./models/AvailabilityRealtime');
+const AvailabilityHour = require('./models/AvailabilityHour');
+const AvailabilityDay = require('./models/AvailabilityDay');
 const WorkshiftsR = require('./models/WorkshiftsR');
 const AvailabilityRealtime = require('./models/AvailabilityRealtime');
 const AvailabilityHour = require('./models/AvailabilityHour');
@@ -113,7 +118,7 @@ app.use('/api/issue', issueRouters)
 app.use('/api/employees', employeeRoutes);
 app.use('/api/workShifts', workShiftRoutes); 
 app.use('/api/productiontask', productionTasktRoutes); 
-
+app.use('/api/downtime',downtimeRoute)
 app.listen(PORT, '0.0.0.0', () => {
   const ipAddress = getIPAddress();
   console.log(`Server is running on http://${ipAddress}:${PORT}`);
