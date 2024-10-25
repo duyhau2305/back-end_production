@@ -119,22 +119,53 @@ const calculateTotalTime = (data) => {
   };
 };
 
-const getDataTotalDeviceStatus = async (req , res) => {
+const getDataTotalDeviceStatus = async (req, res) => {
   const { deviceId, startDate } = req.query;
-  const getAllWorkshift = await WorkshiftsR.find({ shiftCode: "CaChinh"})
-  console.log(getAllWorkshift)
-  const dailyStatus = await DailyStatus.findOne({ date: startDate , deviceId: deviceId });
-  const gaps = findGaps(dailyStatus.intervals);
-  console.log(gaps)
-  const OfflinePercent = calculateTotalOfflinePercentageBefore23(gaps, 'offline');
-  const runPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Chạy');
-  const StopPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Dừng');
-  const totalTime = calculateTotalTime(dailyStatus.intervals);
-  console.log(totalTime)
-  const PercentArray = [{run : runPercent , stop : StopPercent , off : OfflinePercent , totalRunTime : `${Math.floor(totalTime.totalRunTime / 60)} giờ ${totalTime.totalRunTime % 60} phút`, totalStopTime : `${Math.floor(totalTime.totalStopTime / 60)} giờ ${totalTime.totalStopTime % 60} phút` }]
-  console.log(runPercent)
-  return res.status(200).json(PercentArray);
-}
+
+  try {
+    const getAllWorkshift = await WorkshiftsR.find({ shiftCode: "CaChinh" });
+    console.log(getAllWorkshift);
+
+    const dailyStatus = await DailyStatus.findOne({
+      date: startDate,
+      deviceId: deviceId,
+    });
+
+    if (!dailyStatus || !dailyStatus.intervals) {
+      console.error("Không tìm thấy dailyStatus hoặc intervals.");
+      return res.status(404).json({
+        message: "Không tìm thấy dữ liệu cho thiết bị và ngày đã cho.",
+      });
+    }
+
+    const gaps = findGaps(dailyStatus.intervals);
+    console.log(gaps);
+
+    const OfflinePercent = calculateTotalOfflinePercentageBefore23(gaps, 'offline');
+    const runPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Chạy');
+    const StopPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Dừng');
+    const totalTime = calculateTotalTime(dailyStatus.intervals);
+
+    console.log(totalTime);
+
+    const PercentArray = [
+      {
+        run: runPercent,
+        stop: StopPercent,
+        off: OfflinePercent,
+        totalRunTime: `${Math.floor(totalTime.totalRunTime / 60)} giờ ${totalTime.totalRunTime % 60} phút`,
+        totalStopTime: `${Math.floor(totalTime.totalStopTime / 60)} giờ ${totalTime.totalStopTime % 60} phút`,
+      },
+    ];
+
+    console.log(runPercent);
+    return res.status(200).json(PercentArray);
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 const getTelemetryData = async (req, res) => {
   const { deviceId, startDate, endDate } = req.query;
   try {
