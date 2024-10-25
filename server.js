@@ -48,6 +48,7 @@ const getIPAddress = () => {
 
 connectDB();
 
+
 const fetchAndSaveTelemetryDataType = async (type) => {
   try {
     console.log('Fetching and saving telemetry data...');
@@ -60,12 +61,12 @@ const fetchAndSaveTelemetryDataType = async (type) => {
       startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
       endDate = now.getTime();
     }else if(type == '1h'){
-      startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+      startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()-1, 0, 0, 0);
       endDate = now.getTime();
     }else{
       startOfDay = new Date(now.getTime() - 15 * 60 * 1000);
 
-      endDate = now.getTime();
+      endDate = now.getTime() - now.getMinutes()*60*1000;
     }
     const deviceId = '543ff470-54c6-11ef-8dd4-b74d24d26b24';
     const accessToken = await loginAndGetAccessToken();
@@ -96,11 +97,11 @@ function scheduleTask(interval) {
     fetchAndSaveTelemetryDataType(interval);
   });
 }
+fetchAndSaveTelemetryDataType('1h')
 
 scheduleTask('15min'); 
 scheduleTask('1h'); 
 scheduleTask('day');
-
 
 
 app.use('/api', dailyStatusRoutes);

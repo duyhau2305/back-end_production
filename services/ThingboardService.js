@@ -22,6 +22,7 @@ const loginAndGetAccessToken = async () => {
 
 
 const getTelemetryDataFromTB = async (deviceId, startDate, endDate, accessToken) => {
+  
   try {
     const response = await axios.get(
       `${THINGBOARD_API_URL}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=status&limit=10000&startTs=${startDate}&endTs=${endDate}`,

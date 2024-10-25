@@ -1,4 +1,3 @@
-
 const { response } = require('express');
 const cron = require('node-cron');
 
@@ -10,6 +9,7 @@ const moment = require('moment');
 const { default: axios } = require('axios');
 const https = require('https'); // Yêu cầu module https
 const AvailabilityDay = require('../models/AvailabilityDay');
+const ProductionTask = require('../models/ProductionTask');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 const agent = new https.Agent({
@@ -210,8 +210,8 @@ const updateTask = async (req , res) => {
   
   
 }
-const getProcessDevice = async (req , res) => {
-  const { deviceId, startDate , endDate } = req.query;
+const getProcessDevice = async (req, res) => {
+  const { deviceId, startDate, endDate } = req.query;
   const startTime = new Date(startDate);
   const endTime = new Date(endDate);
 
@@ -219,21 +219,61 @@ const getProcessDevice = async (req , res) => {
   const end = endTime.toDateString();
 
   try {
-   
-    const data = await AvailabilityDay.findOne({ date: {
-      $gte: start, // Lớn hơn hoặc bằng startTime
-      $lte: end   // Nhỏ hơn hoặc bằng endTime
-    } , deviceId: deviceId });
-   
-    res.status(200).json(data);
+    // Fetch data from both AvailabilityDay and ProductionTasks concurrently
+    const [availabilityData, productionTasks] = await Promise.all([
+      AvailabilityDay.findOne({
+        date: {
+          $gte: start,
+          $lte: end
+        },
+        deviceId: deviceId
+      }),
+      ProductionTask.aggregate([
+        {
+          $match: {
+            deviceId: deviceId,
+           
+          }
+        },
+        { $unwind: "$shifts" }, // Unwind the shifts array
+        {
+          $lookup: {
+            from: "workshifts", // The collection you're joining with
+            localField: "shifts.shiftName", // Field from productiontasks.shifts
+            foreignField: "shiftName", // Field from workshifts
+            as: "shiftDetails" // The result will be stored in this field
+          }
+        },
+        { $unwind: "$shiftDetails" }, // Unwind the shiftDetails array (if necessary)
+        {
+          $group: {
+            _id: "$_id",
+            shifts: { $push: { shift: "$shifts", shiftDetails: "$shiftDetails" } }, // Group shifts back into an array
+            otherFields: { $first: "$$ROOT" } // Get other fields from the document
+          }
+        },
+        {
+          $replaceRoot: {
+            newRoot: {
+              $mergeObjects: ["$otherFields", { shifts: "$shifts" }] // Replace the root to keep other fields and the joined shifts
+            }
+          }
+        }
+      ])
+    ]);
+
+    // Return both datasets in the response
+    res.status(200).json({ availabilityData, productionTasks });
   } catch (error) {
-    
     res.status(404).json({ error: error.message });
   }
-} 
+};
+
+
 module.exports = {
   getTelemetryData,
   getDataTotalDeviceStatus,
   updateTask,
   getProcessDevice
+  
 };

@@ -1,3 +1,4 @@
+// const moment = require('moment');
 const moment = require('moment-timezone');
 
 const _ = require('lodash');
@@ -65,8 +66,7 @@ function calculateTotalSecondsForValueInRange(data, type, rangeInSeconds) {
   let totalSeconds = 0;
   const now = new Date();
   const nowInSeconds = convertToSeconds(`${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`);
-  const startRangeInSeconds = nowInSeconds - rangeInSeconds; // Thời điểm bắt đầu tính toán
-  
+  const startRangeInSeconds = nowInSeconds - rangeInSeconds;
   data.forEach(interval => {
     if (interval.status === type) {
       const startTimeInSeconds = convertToSeconds(interval.startTime);
@@ -109,15 +109,16 @@ function calculateFor15Minutes(data) {
 }
 function calculateFor1Hour(data) {
   const now = new Date();
-  const minutesNow = now.getMinutes();
-  const secondsNow = now.getSeconds();
-  const oneHourInSeconds = minutesNow * 60 + secondsNow; // Tính từ đầu giờ hiện tại
-  const nowInSeconds = convertToSeconds(`${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`);
-
-  const totalSeconds1HourRunning = calculateTotalSecondsForValueInRange(data, 'Chạy', oneHourInSeconds, nowInSeconds, nowInSeconds - oneHourInSeconds);
+  
+  const startOfCurrentHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+  const startOfPreviousHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() - 1, 0, 0, 0);
+  const startOfPreviousHourInSeconds = convertToSeconds(`${startOfPreviousHour.getHours()}:00:00`);
+  const startOfCurrentHourInSeconds = convertToSeconds(`${startOfCurrentHour.getHours()}:00:00`);
+  const oneHourInSeconds = 3600;
+  const totalSeconds1HourRunning = calculateTotalSecondsForValueInRange(data, 'Chạy', oneHourInSeconds, startOfCurrentHourInSeconds, startOfPreviousHourInSeconds);
   const percentage1HourRunning = (totalSeconds1HourRunning / oneHourInSeconds) * 100;
-
-  const totalSeconds1HourStopped = calculateTotalSecondsForValueInRange(data, 'Dừng', oneHourInSeconds, nowInSeconds, nowInSeconds - oneHourInSeconds);
+  
+  const totalSeconds1HourStopped = calculateTotalSecondsForValueInRange(data, 'Dừng', oneHourInSeconds, startOfCurrentHourInSeconds, startOfPreviousHourInSeconds);
   const percentage1HourStopped = (totalSeconds1HourStopped / oneHourInSeconds) * 100;
 
   return {
@@ -131,6 +132,7 @@ function calculateFor1Hour(data) {
     }
   };
 }
+
 function calculateFor1Day(data) {
   const now = new Date();
   const hour = now.getHours();
@@ -195,7 +197,9 @@ const updateAvailable15Min = async (data) => {
 };
 const updateAvalibleHour = async (data) =>{
   const currentTime = new Date();
-  const HourAgo = new Date(currentTime.getTime() - 60 * 60 * 1000); // Tính toán thời điểm 15 phút trước
+  const minutesNow = currentTime.getMinutes();
+
+  const HourAgo = new Date(currentTime.getTime() - minutesNow* 60 * 1000 - 60 * 60 * 1000 ); 
   console.log(HourAgo)
 
   try {
@@ -251,7 +255,6 @@ const updateAvalibleDay = async (data) =>{
 
 }
 const processAndSaveTelemetryData = async (deviceId, telemetryData , type) => {
-
   const sortedData = telemetryData.sort((a, b) => a.ts - b.ts);
 
     const date = moment(sortedData[0].ts).format('YYYY-MM-DD')
@@ -259,6 +262,7 @@ const processAndSaveTelemetryData = async (deviceId, telemetryData , type) => {
     item.ts = convertTimestampToTime(item.ts);
     });
     const result = generateTimeRanges(sortedData);
+    console.log(result)
     let jsonData;
     switch (type) {
       case '15min':
@@ -301,8 +305,8 @@ const processAndSaveTelemetryData = async (deviceId, telemetryData , type) => {
   if(type == 'day'){
     try { 
       const existingRecord = await DailyStatus.findOne({ deviceId, date });
-      console.log(existingRecord)
       if (existingRecord) {
+        existingRecord.intervals = result;
         existingRecord.intervals = result;
         await existingRecord.save();
       } else {
@@ -310,16 +314,19 @@ const processAndSaveTelemetryData = async (deviceId, telemetryData , type) => {
           deviceId,
           date,
           intervals: result,
+          intervals: result,
         });
         await newDailyStatus.save();
       }
+    
     
   } catch (error) {
     console.error('Error processing and saving telemetry data:', error);
     throw new Error('Error saving telemetry data');
   }
   }
-};
+  }
+
 module.exports = {
   processAndSaveTelemetryData,
 };

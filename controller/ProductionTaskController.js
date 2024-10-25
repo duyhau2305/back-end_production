@@ -127,12 +127,17 @@ async function deleteProductionTask(req, res) {
 
 async function getAllProductionTasks(req, res) {
   try {
-    const productionTasks = await productionTaskService.getAllProductionTasks();
+    const { deviceName, startDate, endDate } = req.query;
+
+    const filter = { deviceName, startDate, endDate };
+    const productionTasks = await productionTaskService.getAllProductionTasks(filter);
+
     res.status(200).json(productionTasks);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 }
+
 
 async function getProductionTaskById(req, res) {
   try {

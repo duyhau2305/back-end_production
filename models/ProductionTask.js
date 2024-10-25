@@ -24,6 +24,10 @@ const ProductionTaskSchema = new Schema({
     type: Date, 
     required: true 
   },
+  deviceId: { 
+    type: String, 
+  },
+  
   deviceName: { 
     type: String, 
     required: true 
