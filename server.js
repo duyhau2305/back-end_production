@@ -118,4 +118,3 @@ app.listen(PORT, '0.0.0.0', () => {
   const ipAddress = getIPAddress();
   console.log(`Server is running on http://${ipAddress}:${PORT}`);
 });
-

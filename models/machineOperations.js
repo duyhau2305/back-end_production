@@ -9,7 +9,4 @@ const MachineOperations = new mongoose.Schema({
   status : { type: String, required: true },
   durationInMinutes : { type: Number, required: true },
 }, { timestamps: true });
-
-
-
 module.exports = mongoose.model('MachineOperations', MachineOperations);
