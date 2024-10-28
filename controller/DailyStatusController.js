@@ -10,6 +10,7 @@ const { default: axios } = require('axios');
 const https = require('https'); // Yêu cầu module https
 const AvailabilityDay = require('../models/AvailabilityDay');
 const ProductionTask = require('../models/ProductionTask');
+const machineOperations = require('../models/machineOperations');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 const agent = new https.Agent({
@@ -119,53 +120,22 @@ const calculateTotalTime = (data) => {
   };
 };
 
-const getDataTotalDeviceStatus = async (req, res) => {
+const getDataTotalDeviceStatus = async (req , res) => {
   const { deviceId, startDate } = req.query;
-
-  try {
-    const getAllWorkshift = await WorkshiftsR.find({ shiftCode: "CaChinh" });
-    console.log(getAllWorkshift);
-
-    const dailyStatus = await DailyStatus.findOne({
-      date: startDate,
-      deviceId: deviceId,
-    });
-
-    if (!dailyStatus || !dailyStatus.intervals) {
-      console.error("Không tìm thấy dailyStatus hoặc intervals.");
-      return res.status(404).json({
-        message: "Không tìm thấy dữ liệu cho thiết bị và ngày đã cho.",
-      });
-    }
-
-    const gaps = findGaps(dailyStatus.intervals);
-    console.log(gaps);
-
-    const OfflinePercent = calculateTotalOfflinePercentageBefore23(gaps, 'offline');
-    const runPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Chạy');
-    const StopPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Dừng');
-    const totalTime = calculateTotalTime(dailyStatus.intervals);
-
-    console.log(totalTime);
-
-    const PercentArray = [
-      {
-        run: runPercent,
-        stop: StopPercent,
-        off: OfflinePercent,
-        totalRunTime: `${Math.floor(totalTime.totalRunTime / 60)} giờ ${totalTime.totalRunTime % 60} phút`,
-        totalStopTime: `${Math.floor(totalTime.totalStopTime / 60)} giờ ${totalTime.totalStopTime % 60} phút`,
-      },
-    ];
-
-    console.log(runPercent);
-    return res.status(200).json(PercentArray);
-  } catch (error) {
-    console.error("Lỗi khi lấy dữ liệu:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-
+  const getAllWorkshift = await WorkshiftsR.find({ shiftCode: "CaChinh"})
+  console.log(getAllWorkshift)
+  const dailyStatus = await DailyStatus.findOne({ date: startDate , deviceId: deviceId });
+  const gaps = findGaps(dailyStatus.intervals);
+  console.log(gaps)
+  const OfflinePercent = calculateTotalOfflinePercentageBefore23(gaps, 'offline');
+  const runPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Chạy');
+  const StopPercent = calculateTotalOfflinePercentageBefore23(dailyStatus.intervals, 'Dừng');
+  const totalTime = calculateTotalTime(dailyStatus.intervals);
+  console.log(totalTime)
+  const PercentArray = [{run : runPercent , stop : StopPercent , off : OfflinePercent , totalRunTime : `${Math.floor(totalTime.totalRunTime / 60)} giờ ${totalTime.totalRunTime % 60} phút`, totalStopTime : `${Math.floor(totalTime.totalStopTime / 60)} giờ ${totalTime.totalStopTime % 60} phút` }]
+  console.log(runPercent)
+  return res.status(200).json(PercentArray);
+}
 const getTelemetryData = async (req, res) => {
   const { deviceId, startDate, endDate } = req.query;
   try {
@@ -243,17 +213,16 @@ const updateTask = async (req , res) => {
 }
 const getProcessDevice = async (req, res) => {
   const { deviceId, startDate, endDate } = req.query;
-  const startTime = new Date(startDate);
-  const endTime = new Date(endDate);
 
-  const start = startTime.toDateString();
-  const end = endTime.toDateString();
+  // Chuyển startDate và endDate từ chuỗi 'YYYY-MM-DD' sang định dạng UTC
+  const start = new Date(`${startDate}T00:00:00.000Z`).toISOString();
+  const end = new Date(`${endDate}T23:59:59.999Z`).toISOString();
 
   try {
-    // Fetch data from both AvailabilityDay and ProductionTasks concurrently
+    // Lấy dữ liệu từ AvailabilityDay và ProductionTasks đồng thời
     const [availabilityData, productionTasks] = await Promise.all([
       AvailabilityDay.findOne({
-        date: {
+        logTime: {
           $gte: start,
           $lte: end
         },
@@ -263,48 +232,94 @@ const getProcessDevice = async (req, res) => {
         {
           $match: {
             deviceId: deviceId,
-           
           }
         },
-        { $unwind: "$shifts" }, // Unwind the shifts array
+        { $unwind: "$shifts" }, // Tách mảng shifts thành các phần tử riêng
         {
           $lookup: {
-            from: "workshifts", // The collection you're joining with
-            localField: "shifts.shiftName", // Field from productiontasks.shifts
-            foreignField: "shiftName", // Field from workshifts
-            as: "shiftDetails" // The result will be stored in this field
+            from: "workshifts", // Tên của collection bạn muốn join
+            localField: "shifts.shiftName", // Trường trong ProductionTasks.shifts
+            foreignField: "shiftName", // Trường trong workshifts
+            as: "shiftDetails" // Tên trường lưu kết quả join
           }
         },
-        { $unwind: "$shiftDetails" }, // Unwind the shiftDetails array (if necessary)
+        { $unwind: "$shiftDetails" }, // Tách mảng shiftDetails nếu cần thiết
         {
           $group: {
             _id: "$_id",
-            shifts: { $push: { shift: "$shifts", shiftDetails: "$shiftDetails" } }, // Group shifts back into an array
-            otherFields: { $first: "$$ROOT" } // Get other fields from the document
+            shifts: { $push: { shift: "$shifts", shiftDetails: "$shiftDetails" } }, // Gom shifts thành mảng
+            otherFields: { $first: "$$ROOT" } // Giữ các trường khác từ document gốc
           }
         },
         {
           $replaceRoot: {
             newRoot: {
-              $mergeObjects: ["$otherFields", { shifts: "$shifts" }] // Replace the root to keep other fields and the joined shifts
+              $mergeObjects: ["$otherFields", { shifts: "$shifts" }] // Thay thế root để giữ các trường khác và shifts đã join
             }
           }
         }
       ])
     ]);
 
-    // Return both datasets in the response
+    // Trả về cả hai bộ dữ liệu trong response
     res.status(200).json({ availabilityData, productionTasks });
   } catch (error) {
     res.status(404).json({ error: error.message });
   }
 };
+const getMachineOperations = async (req, res) => {
+  const { deviceId, startDate, endDate } = req.query;
+
+  try {
+    // Kiểm tra deviceId, startDate, và endDate hợp lệ
+    if (!deviceId || !Date.parse(startDate) || !Date.parse(endDate)) {
+      return res.status(400).json({ message: 'Invalid parameters' });
+    }
+
+    // Tìm kiếm các bản ghi trong khoảng thời gian đã cung cấp
+    const operations = await machineOperations.find({
+      deviceId: deviceId,
+      startTime: { $gte: startDate, $lte: endDate },
+      endTime: { $gte: startDate, $lte: endDate }
+    });
+
+    // Nhóm kết quả theo ngày
+    const result = operations.reduce((acc, operation) => {
+      const date = operation.startTime.split('T')[0]; // Lấy ngày từ startTime
+
+      // Kiểm tra xem đã có ngày này trong acc chưa
+      if (!acc[date]) {
+        acc[date] = { deviceId, date, intervals: [] };
+      }
+
+      // Thêm interval vào mảng intervals
+      acc[date].intervals.push({
+        startTime: operation.startTime,
+        endTime: operation.endTime,
+        status: operation.status
+      });
+
+      return acc;
+    }, {});
+
+    // Chuyển đổi object thành mảng
+    const finalResult = Object.values(result);
+    console.log(finalResult);
+    return res.status(200).json(finalResult);
+  } catch (error) {
+    console.error('Error fetching machine operations:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+
 
 
 module.exports = {
   getTelemetryData,
   getDataTotalDeviceStatus,
   updateTask,
-  getProcessDevice
-  
+  getProcessDevice,
+  getMachineOperations
 };

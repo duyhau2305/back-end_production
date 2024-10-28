@@ -6,6 +6,7 @@ const DailyStatus = require('../models/DailyStatus');
 const AvailabilityRealtime = require('../models/AvailabilityRealtime');
 const AvailabilityHour = require('../models/AvailabilityHour');
 const AvailabilityDay = require('../models/AvailabilityDay');
+const machineOperations = require('../models/machineOperations');
 
 
 
@@ -14,6 +15,44 @@ function convertTimestampToTime(timestamp) {
   const date = new Date(timestamp);
   return date.toLocaleTimeString();
 }
+function generateTimeRangesForNew(data, deviceId) {
+  const ranges = [];
+  let startTime = new Date(data[0].ts).toISOString();
+  let currentValue = data[0].value;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i].value !== currentValue) {
+      const endTime = new Date(data[i - 1].ts).toISOString();
+      const durationInSeconds = (new Date(endTime) - new Date(startTime)) / 1000; 
+      // Lấy ngày từ startTime và định dạng lại
+      const date = new Date(startTime).toISOString().split('T')[0] + 'T00:00:00.000Z';
+      ranges.push({
+        deviceId: deviceId,
+        startTime: startTime,
+        endTime: endTime,
+        status: currentValue === '1' ? 'Chạy' : 'Dừng',
+        durationInMinutes: durationInSeconds,
+        date: date 
+      });
+      startTime = new Date(data[i].ts).toISOString();
+      currentValue = data[i].value;
+    }
+  }
+  const endTime = new Date(data[data.length - 1].ts).toISOString();
+  const durationInSeconds = (new Date(endTime) - new Date(startTime)) / 1000; 
+  // Lấy ngày từ startTime và định dạng lại
+  const date = new Date(startTime).toISOString().split('T')[0] + 'T00:00:00.000Z';
+  ranges.push({
+    deviceId: deviceId,
+    startTime: startTime,
+    endTime: endTime,
+    status: currentValue === '1' ? 'Chạy' : 'Dừng',
+    durationInMinutes: durationInSeconds,
+    date: date 
+  });
+
+  return ranges;
+}
+
 function generateTimeRanges(data) {
   const ranges = [];
   let startTime = data[0].ts;
@@ -132,7 +171,6 @@ function calculateFor1Hour(data) {
     }
   };
 }
-
 function calculateFor1Day(data) {
   const now = new Date();
   const hour = now.getHours();
@@ -168,7 +206,6 @@ function convertTimestampToTime(timestamp) {
     return formattedTime;
 }
 const updateAvailable15Min = async (data) => {
-  console.log(data)
   try {
     let new15;
     const currentTime = new Date();
@@ -200,7 +237,6 @@ const updateAvalibleHour = async (data) =>{
   const minutesNow = currentTime.getMinutes();
 
   const HourAgo = new Date(currentTime.getTime() - minutesNow* 60 * 1000 - 60 * 60 * 1000 ); 
-  console.log(HourAgo)
 
   try {
     let new15;
@@ -254,78 +290,78 @@ const updateAvalibleDay = async (data) =>{
   }
 
 }
-const processAndSaveTelemetryData = async (deviceId, telemetryData , type) => {
-  const sortedData = telemetryData.sort((a, b) => a.ts - b.ts);
+const processAndSaveTelemetryData = async (deviceId, telemetryData, type) => {
+  const HoldValueTelemetryData = Array.from(telemetryData);
+  const sortedData = HoldValueTelemetryData.sort((a, b) => a.ts - b.ts);  
+  const sortedDataForProcessing = sortedData.map(item => ({
+    ...item,
+    ts: convertTimestampToTime(item.ts)
+  }));
+  const result = generateTimeRanges(sortedDataForProcessing);
+  let jsonData;
+  switch (type) {
+    case '15min':
+      jsonData = JSON.parse(JSON.stringify(calculateFor15Minutes(result), null, 2));
+      break;
+    case '1h':
+      jsonData = JSON.parse(JSON.stringify(calculateFor1Hour(result), null, 2));
+      break;
+    case 'day':
+      jsonData = JSON.parse(JSON.stringify(calculateFor1Day(result), null, 2));
+      break;
+    default:
+      break;
+  }
 
-    const date = moment(sortedData[0].ts).format('YYYY-MM-DD')
-    sortedData.forEach(item => {
-    item.ts = convertTimestampToTime(item.ts);
-    });
-    const result = generateTimeRanges(sortedData);
-    console.log(result)
-    let jsonData;
-    switch (type) {
-      case '15min':
-        const processData = JSON.stringify(calculateFor15Minutes(result), null, 2)
-        jsonData = JSON.parse(processData)
-        break;
-      case '1h' :
-        const processData1h = JSON.stringify(calculateFor1Hour(result), null, 2)
-        jsonData = JSON.parse(processData1h)
-        break;
-      case 'day' :
-        const processData1d = JSON.stringify(calculateFor1Day(result), null, 2)
-        jsonData = JSON.parse(processData1d)
-        break;
-      default:
-        break;
-    } 
-    console.log(jsonData)
-    const data = {
-      deviceId : deviceId , 
-      logTime : new Date(),
-      runtime : jsonData.Running.totalSeconds,
-      stopTime: jsonData.Stopped.totalSeconds,
-      date :new Date().toDateString()
-    }
-    console.log(type)
-    switch (type) {
-      case '15min':
-        updateAvailable15Min(data)
-        break;
-      case '1h' :
-        updateAvalibleHour(data)
-        break;
-      case 'day' :
-        updateAvalibleDay(data)
-        break;
-      default:
-        break;
-    }  
-  if(type == 'day'){
-    try { 
-      const existingRecord = await DailyStatus.findOne({ deviceId, date });
-      if (existingRecord) {
-        existingRecord.intervals = result;
-        existingRecord.intervals = result;
-        await existingRecord.save();
+  const data = {
+    deviceId: deviceId,
+    logTime: new Date().toISOString(),
+    runtime: Number(jsonData.Running.totalSeconds),
+    stopTime: Number(jsonData.Stopped.totalSeconds),
+  };
+
+  switch (type) {
+    case '15min':
+      updateAvailable15Min(data);
+      break;
+    case '1h':
+      updateAvalibleHour(data);
+      break;
+    case 'day':
+      updateAvalibleDay(data);
+      break;
+    default:
+      break;
+  }
+
+  if (type == 'day') {
+    const sortedDataForSave = Array.from(telemetryData).sort((a, b) => a.ts - b.ts);
+    const ResultsforNew = generateTimeRangesForNew(sortedDataForSave, deviceId);
+    try {
+      const existingRecords = await machineOperations.find({
+        deviceId: deviceId,
+        $or: ResultsforNew.map(r => ({
+          startTime: r.startTime,
+          endTime: r.endTime
+        }))
+      }).select('startTime endTime'); 
+      const existingRecordsSet = new Set(
+        existingRecords.map(record => record.startTime + record.endTime)
+      );
+      const newRecords = ResultsforNew.filter(
+        r => !existingRecordsSet.has(r.startTime + r.endTime)
+      );
+      if (newRecords.length > 0) {
+        const savedOperations = await machineOperations.insertMany(newRecords);
+        console.log('Thêm thành công các bản ghi:', savedOperations);
       } else {
-        const newDailyStatus = new DailyStatus({
-          deviceId,
-          date,
-          intervals: result,
-          intervals: result,
-        });
-        await newDailyStatus.save();
+        console.log('Không có bản ghi mới nào để thêm.');
       }
-    
-    
-  } catch (error) {
-    console.error('Error processing and saving telemetry data:', error);
-    throw new Error('Error saving telemetry data');
+    } catch (error) {
+      console.error('Lỗi khi thêm bản ghi:', error);
+    }
   }
-  }
-  }
+};
 
 module.exports = {
   processAndSaveTelemetryData,

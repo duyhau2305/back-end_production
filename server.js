@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const cron = require('node-cron');
 const { getTelemetryDataFromTB , loginAndGetAccessToken } = require('./services/ThingboardService');
-const { processAndSaveTelemetryData, caculateData } = require('./services/TelemetryProcessingService');
+const { processAndSaveTelemetryData, caculateData, addNewProcessAndSaveTelemetryData } = require('./services/TelemetryProcessingService');
 const connectDB = require('./config/db'); 
 const cors = require('cors');
 const os = require('os');
@@ -22,10 +22,12 @@ const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
 const dailyStatusService = require('./services/DailyStatusService');
+
 const WorkshiftsR = require('./models/WorkshiftsR');
 const AvailabilityRealtime = require('./models/AvailabilityRealtime');
 const AvailabilityHour = require('./models/AvailabilityHour');
 const AvailabilityDay = require('./models/AvailabilityDay');
+const MachineOperations = require('./models/machineOperations');
 
 dotenv.config(); 
 
@@ -56,8 +58,6 @@ const fetchAndSaveTelemetryDataType = async (type) => {
     let startOfDay; 
     let endDate;
     if(type == 'day'){
-      console.log(startOfDay)
-
       startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
       endDate = now.getTime();
     }else if(type == '1h'){
@@ -97,7 +97,7 @@ function scheduleTask(interval) {
     fetchAndSaveTelemetryDataType(interval);
   });
 }
-fetchAndSaveTelemetryDataType('1h')
+fetchAndSaveTelemetryDataType('day')
 
 scheduleTask('15min'); 
 scheduleTask('1h'); 
@@ -118,3 +118,4 @@ app.listen(PORT, '0.0.0.0', () => {
   const ipAddress = getIPAddress();
   console.log(`Server is running on http://${ipAddress}:${PORT}`);
 });
+
