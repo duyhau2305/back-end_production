@@ -238,6 +238,7 @@ const processAndSaveTelemetryData = async (deviceId, telemetryData) => {
 
 };
 
+
 module.exports = {
   processAndSaveTelemetryData,
 };

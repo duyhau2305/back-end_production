@@ -23,6 +23,7 @@ const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
 const dailyStatusService = require('./services/DailyStatusService');
 
+
 const WorkshiftsR = require('./models/WorkshiftsR');
 const AvailabilityRealtime = require('./models/AvailabilityRealtime');
 const AvailabilityHour = require('./models/AvailabilityHour');

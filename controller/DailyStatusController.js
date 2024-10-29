@@ -217,17 +217,19 @@ const getProcessDevice = async (req, res) => {
   // Chuyển startDate và endDate từ chuỗi 'YYYY-MM-DD' sang định dạng UTC
   const start = new Date(`${startDate}T00:00:00.000Z`).toISOString();
   const end = new Date(`${endDate}T23:59:59.999Z`).toISOString();
+ 
 
   try {
-    // Lấy dữ liệu từ AvailabilityDay và ProductionTasks đồng thời
+  
     const [availabilityData, productionTasks] = await Promise.all([
       AvailabilityDay.findOne({
+        logTime: {
         logTime: {
           $gte: start,
           $lte: end
         },
         deviceId: deviceId
-      }),
+      }}),
       ProductionTask.aggregate([
         {
           $match: {
@@ -235,20 +237,24 @@ const getProcessDevice = async (req, res) => {
           }
         },
         { $unwind: "$shifts" }, // Tách mảng shifts thành các phần tử riêng
+        { $unwind: "$shifts" }, // Tách mảng shifts thành các phần tử riêng
         {
           $lookup: {
             from: "workshifts", // Tên của collection bạn muốn join
             localField: "shifts.shiftName", // Trường trong ProductionTasks.shifts
             foreignField: "shiftName", // Trường trong workshifts
             as: "shiftDetails" // Tên trường lưu kết quả join
+            
           }
         },
+        { $unwind: "$shiftDetails" }, // Tách mảng shiftDetails nếu cần thiết
         { $unwind: "$shiftDetails" }, // Tách mảng shiftDetails nếu cần thiết
         {
           $group: {
             _id: "$_id",
             shifts: { $push: { shift: "$shifts", shiftDetails: "$shiftDetails" } }, // Gom shifts thành mảng
             otherFields: { $first: "$$ROOT" } // Giữ các trường khác từ document gốc
+            
           }
         },
         {
@@ -261,6 +267,7 @@ const getProcessDevice = async (req, res) => {
       ])
     ]);
 
+    // Trả về cả hai bộ dữ liệu trong response
     // Trả về cả hai bộ dữ liệu trong response
     res.status(200).json({ availabilityData, productionTasks });
   } catch (error) {

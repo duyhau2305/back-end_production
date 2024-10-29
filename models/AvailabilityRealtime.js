@@ -9,4 +9,3 @@ const AvailabilityRealtimeSchema = new mongoose.Schema({
 }, { timestamps: true });
 const AvailabilityRealtime = mongoose.model('AvailabilityRealtime', AvailabilityRealtimeSchema);
 module.exports = AvailabilityRealtime;
- 
