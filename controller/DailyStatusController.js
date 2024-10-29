@@ -292,8 +292,8 @@ const getMachineOperations = async (req, res) => {
         acc[date] = { deviceId, date, intervals: [] };
       }
       acc[date].intervals.push({
-        startTime: operation.startTime,
-        endTime: operation.endTime,
+        startTime: moment(operation.startTime).utc().format('HH:mm:ss'),
+        endTime: moment(operation.endTime).utc().format('HH:mm:ss'),
         status: operation.status
       });
       return acc;
