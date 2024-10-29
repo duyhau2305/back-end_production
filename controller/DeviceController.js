@@ -5,39 +5,37 @@ const deviceService = require('../services/DeviceService'); // Import Device Ser
 async function createDevice(req, res) {
   const { deviceId, deviceName, areaName, model, technicalSpecifications, purchaseDate } = req.body;
 
-  // Check for required fields
+  // Kiểm tra các trường bắt buộc
   if (!deviceId || !deviceName || !areaName || !model || !purchaseDate || !technicalSpecifications) {
     return res.status(400).json({ message: 'Tất cả các trường bắt buộc phải có.' });
   }
 
-  // Trim deviceId to avoid whitespace issues
-  const trimmedDeviceId = deviceId.trim();
+  // Chuyển deviceId thành chuỗi và trim
+  const trimmedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : String(deviceId).trim();
 
   try {
-    // Debugging: Log the incoming data
-    console.log("Incoming device data:", req.body);
-    console.log("Trimmed Device ID:", trimmedDeviceId);
+    console.log('Incoming device data:', req.body);
+    console.log('Trimmed Device ID:', trimmedDeviceId);
 
-
-    // Check if the device ID already exists
+    // Kiểm tra xem thiết bị đã tồn tại chưa
     const existingDevice = await deviceService.getDeviceById(trimmedDeviceId);
-    console.log("Existing Device:", existingDevice);
+    console.log('Existing Device:', existingDevice);
 
     if (existingDevice) {
       return res.status(400).json({ message: `Thiết bị với ID ${trimmedDeviceId} đã tồn tại.` });
     }
 
-    // Check if the area exists
-    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, "i") });
+    // Kiểm tra khu vực tồn tại
+    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, 'i') });
     if (!existingArea) {
       return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
     }
 
-    // Create the device
+    // Tạo thiết bị mới
     const device = await deviceService.createDevice({ ...req.body, deviceId: trimmedDeviceId });
     return res.status(201).json(device);
   } catch (err) {
-    console.error('Error creating device:', err); // Log the full error
+    console.error('Error creating device:', err);
 
     if (err.code === 11000) {
       return res.status(400).json({ message: `Thiết bị với ID ${trimmedDeviceId} đã tồn tại.` });
@@ -46,6 +44,7 @@ async function createDevice(req, res) {
     return res.status(500).json({ message: 'Đã xảy ra lỗi khi thêm thiết bị.', error: err.message });
   }
 }
+
 
 
 
