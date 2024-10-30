@@ -23,7 +23,6 @@ const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
 const dailyStatusService = require('./services/DailyStatusService');
 
-
 const WorkshiftsR = require('./models/WorkshiftsR');
 const AvailabilityRealtime = require('./models/AvailabilityRealtime');
 const AvailabilityHour = require('./models/AvailabilityHour');
@@ -52,27 +51,57 @@ const getIPAddress = () => {
 connectDB();
 
 
-const fetchAndSaveTelemetryDataType = async () => {
+const fetchAndSaveTelemetryDataType = async (type) => {
   try {
     console.log('Fetching and saving telemetry data...');
     const now = new Date();
     let startOfDay; 
     let endDate;
-    startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()-1, 0, 0, 0);
-    endDate = now.getTime() - now.getMinutes()*60*1000;
+    if(type == 'day'){
+      startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = now.getTime();
+    }else if(type == '1h'){
+      startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()-1, 0, 0, 0);
+      endDate = now.getTime();
+    }else{
+      startOfDay = new Date(now.getTime() - 15 * 60 * 1000);
+
+      endDate = now.getTime() - now.getMinutes()*60*1000;
+    }
     const deviceId = '543ff470-54c6-11ef-8dd4-b74d24d26b24';
     const accessToken = await loginAndGetAccessToken();
+
     let telemetryData = await getTelemetryDataFromTB(deviceId, startOfDay.getTime(), endDate, accessToken);
-    await processAndSaveTelemetryData(deviceId, telemetryData );
+    await processAndSaveTelemetryData(deviceId, telemetryData , type);
     console.log('Telemetry data saved successfully');
   } catch (error) {
     console.error('Failed to fetch and save telemetry data:', error.message);
   }
 };
-cron.schedule('*/15 * * * *', () => {
-  fetchAndSaveTelemetryDataType();
-});
-fetchAndSaveTelemetryDataType()
+
+function scheduleTask(interval) {
+
+  let cronExpression = '';
+
+  if (interval === '15min') {
+      cronExpression = '*/15 * * * *'; // Mỗi 15 phút
+  } else if (interval === '1h') {
+      cronExpression = '0 * * * *'; // Mỗi giờ (vào phút thứ 0)
+  } else if (interval === 'day') {
+      cronExpression = '0 0 * * *'; // Mỗi ngày (vào 00:00 giờ)
+  } else {
+      throw new Error('Invalid interval provided');
+  }
+
+  cron.schedule(cronExpression, () => {
+    fetchAndSaveTelemetryDataType(interval);
+  });
+}
+fetchAndSaveTelemetryDataType('day')
+
+scheduleTask('15min'); 
+scheduleTask('1h'); 
+scheduleTask('day');
 
 
 app.use('/api', dailyStatusRoutes);

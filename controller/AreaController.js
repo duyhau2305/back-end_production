@@ -1,7 +1,6 @@
-// controllers/areaController.js
 const areaService = require('../services/AreaService');
 
-//create Area
+
 async function createArea(req, res) {
     try {
         const area = await areaService.createArea(req.body);
@@ -11,6 +10,7 @@ async function createArea(req, res) {
     }
 }
 
+
 async function updateArea(req, res) {
     try {
         const area = await areaService.updateArea(req.params.id, req.body);
@@ -19,9 +19,10 @@ async function updateArea(req, res) {
         }
         res.status(200).json(area);
     } catch (err) {
-        res.status(400).json({ message: 'Mã khu vực hoặc tên khu vực đã tồn tại' });
+        res.status(400).json({ message: err.message });
     }
 }
+
 
 async function deleteArea(req, res) {
     try {
@@ -35,6 +36,7 @@ async function deleteArea(req, res) {
     }
 }
 
+
 async function getAreaById(req, res) {
     try {
         const area = await areaService.getAreaById(req.params.id);
@@ -47,6 +49,7 @@ async function getAreaById(req, res) {
     }
 }
 
+// Lấy danh sách tất cả khu vực
 async function getAllAreas(req, res) {
     try {
         const areas = await areaService.getAllAreas();
