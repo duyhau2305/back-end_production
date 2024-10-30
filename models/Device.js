@@ -31,6 +31,15 @@ const deviceSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Ngày Mua là bắt buộc'],
   },
+  tbDeviceId: {
+    type: String
+  },
+  operationStatusKey: {
+    type: String
+  },
+  controlKey: {
+    type: String
+  }
 }, {
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });

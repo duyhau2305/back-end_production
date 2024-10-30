@@ -1,45 +1,66 @@
 const axios = require('axios');
+const logger = require('../config/logger');
+const { MAX_RECORD_FETCHED } = require('../constants/thingsboard');
+const serviceName = 'ThingsboardService';
 
-const THINGBOARD_API_URL = 'http://cloud.datainsight.vn:8080';
-const USERNAME = 'oee2024@gmail.com';
-const PASSWORD = 'Oee@2124';
+const THINGBOARD_API_URL = 'http://192.168.10.170:8080';
+const USERNAME = 'qcs2024@gmail.com';
+const PASSWORD = 'Qcs@2024';
 
+const instance = axios.create({});
 
-const loginAndGetAccessToken = async () => {
+const loginFunct = async (config) => {
   try {
     const response = await axios.post(`${THINGBOARD_API_URL}/api/auth/login`, {
       username: USERNAME,
       password: PASSWORD,
     });
     const accessToken = response.data.token;
-    console.log('Access token received:', accessToken); 
-    return accessToken;
+    logger.info(`Login Thingsboard success, accessToken = ${accessToken}`);
+    instance.defaults.headers["Authorization"] = `Bearer ${accessToken}`;
+    if (config) {
+      // the request from interceptors, they need to update the config
+      config.headers["Authorization"] = `Bearer ${accessToken}`;
+      return config;
+    }
   } catch (error) {
-    console.error('Failed to get access token:', error.message);
-    throw new Error('Failed to get access token');
+    throw error;
   }
 };
 
-
-const getTelemetryDataFromTB = async (deviceId, startDate, endDate, accessToken) => {
-  
-  try {
-    const response = await axios.get(
-      `${THINGBOARD_API_URL}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=status&limit=10000&startTs=${startDate}&endTs=${endDate}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    return response.data.status; 
-  } catch (error) {
-    console.error('Failed to fetch telemetry data:', error.message);
-    throw new Error('Failed to fetch telemetry data');
+instance.interceptors.request.use(async (config) => {
+  if (!config.headers["Authorization"] && !config.url?.includes('/api/auth/login')) {
+    let newConfig = await loginFunct(config);
+    return newConfig;
+  } else {
+    return config;
   }
-};
+}, (error) => {
+  logger.error(`${serviceName}::interceptors.request - ${error.message}`);
+  return Promise.reject(error);
+});
+
+instance.interceptors.response.use((response) => response, (error) => {
+  if (error.response && error.response.data) {
+    let { status } = error.response.data;
+    if (status === 401) {
+      // refeshing token.
+      let newConfig = loginFunct(error.config);
+      return instance.request(newConfig);
+    }
+  }
+  return Promise.reject(error);
+});
 
 module.exports = {
-  loginAndGetAccessToken,
-  getTelemetryDataFromTB,
-};
+  async getTelemetryDataByDeviceId(deviceId, startTs, endTs, keys) {
+    try {
+      let keysString = keys.length ? keys.join(',') : ' ';
+      const buildUrl = `${THINGBOARD_API_URL}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=${keysString}&limit=${MAX_RECORD_FETCHED}&startTs=${startTs}&endTs=${endTs}`;
+      const response = await instance.get(buildUrl);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+}
