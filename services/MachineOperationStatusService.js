@@ -4,6 +4,7 @@ const ThingboardService = require("./ThingboardService");
 const { getMachineStatus } = require("./UtilitiesService");
 const moment = require("moment-timezone");
 const constants = require("../constants/constants");
+const AvailabilityDay = require("../models/AvailabilityDay");
 
 module.exports = {
     async getStatusTimeline(params) {
@@ -54,6 +55,36 @@ module.exports = {
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
                 data: result
+            };
+        } catch (err) {
+            return {
+                status: constants.INTERNAL_ERROR,
+                error: err
+            }
+        }
+    },
+
+    async getSummaryStatus(params) {
+        try {
+            const { startTime, endTime, machineId } = params;
+            const machineProfile = await Device.findById(machineId);
+            if (!machineProfile) {
+                return {
+                    status: constants.RESOURCE_NOT_FOUND,
+                    data: machineId
+                }
+            }
+            const data = await AvailabilityDay.find({
+                machineId: machineId,
+                logTime: {
+                    $gte: startTime,
+                    $lte: endTime
+                }
+            });
+
+            return {
+                status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
+                data: data
             };
         } catch (err) {
             return {

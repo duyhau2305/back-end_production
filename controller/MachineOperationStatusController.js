@@ -25,5 +25,29 @@ module.exports = {
         } catch (error) {
             return HttpResponseService.internalServerError(res, error);
         }
+    },
+
+    async getSummaryStatus(req, res) {
+        try {
+            const machineId = req.params.machineId;
+            const {startTime, endTime} = req.query;
+            const params = {
+                machineId: machineId,
+                startTime: startTime,
+                endTime: endTime
+            }
+            const getSummaryStatus = await MachineOperationStatusService.getSummaryStatus(params);
+            switch (getSummaryStatus.status) {
+                case constants.RESOURCE_SUCCESSFULLY_FETCHED:
+                    return HttpResponseService.success(res, constants.SUCCESS, getSummaryStatus.data);
+                case constants.RESOURCE_NOT_FOUND:
+                    const errMsg = `No machine found with id = ${machineId}`;
+                    return HttpResponseService.notFound(res, errMsg);
+                default:
+                    return HttpResponseService.internalServerError(res, getSummaryStatus);
+            }
+        } catch (error) {
+            return HttpResponseService.internalServerError(res, error);
+        }
     }
 }

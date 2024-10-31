@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const AvailabilityDaySchema = new mongoose.Schema({
-  deviceId: { type: String, required: true },
+  machineId: { type: String, required: true },
   logTime: { type: String, required: true }, 
   runtime: { type: Number, required: true }, 
   offlineTime: { type: Number},
