@@ -25,7 +25,6 @@ const AvailabilityRealtime = require('./models/AvailabilityRealtime');
 const AvailabilityHour = require('./models/AvailabilityHour');
 const AvailabilityDay = require('./models/AvailabilityDay');
 const MachineOperations = require('./models/machineOperations');
-const { globalErrorHandler } = require('./middlewares/globalErrorHandler');
 
 dotenv.config(); 
 
@@ -114,7 +113,6 @@ app.use('/api/workShifts', workShiftRoutes);
 app.use('/api/productiontask', productionTasktRoutes); 
 app.use('/api/downtime',downtimeRoute);
 app.use('/api/machine-operations', machineOperationsRoute);
-app.use(globalErrorHandler);
 app.listen(PORT, '0.0.0.0', () => {
   const ipAddress = getIPAddress();
   console.log(`Server is running on http://${ipAddress}:${PORT}`);
