@@ -3,9 +3,9 @@ const logger = require('../config/logger');
 const { MAX_RECORD_FETCHED } = require('../constants/thingsboard');
 const serviceName = 'ThingsboardService';
 
-const THINGBOARD_API_URL = 'http://192.168.10.170:8080';
-const USERNAME = 'qcs2024@gmail.com';
-const PASSWORD = 'Qcs@2024';
+const THINGBOARD_API_URL = process.env.THINGBOARD_URL;
+const USERNAME = process.env.THINGBOARD_USERNAME || 'qcs2024@gmail.com';
+const PASSWORD = process.env.THINGBOARD_PASSWORD || 'Qcs@2024';
 
 const instance = axios.create({});
 
@@ -58,6 +58,7 @@ module.exports = {
       let keysString = keys.length ? keys.join(',') : ' ';
       const buildUrl = `${THINGBOARD_API_URL}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=${keysString}&limit=${MAX_RECORD_FETCHED}&startTs=${startTs}&endTs=${endTs}`;
       const response = await instance.get(buildUrl);
+      logger.info(`${serviceName}.getTelemetryDataByDeviceId() - Get telemetry data by device id = ${deviceId} success.`)
       return response.data;
     } catch (error) {
       throw error;

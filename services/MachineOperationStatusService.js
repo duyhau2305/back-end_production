@@ -15,7 +15,6 @@ module.exports = {
         const keys = [machineProfile.operationStatusKey];
         const thingsboardData = await ThingboardService.getTelemetryDataByDeviceId(machineProfile.tbDeviceId, startTs, endTs, keys);
         const machineStatusData = thingsboardData[machineProfile.operationStatusKey] ?? [];
-        console.log(machineStatusData.length)
         const machineStatusDataGroupByDay = groupBy(machineStatusData, (item) => moment(item.ts).tz('Asia/Ho_Chi_Minh').format("YYYY-MM-DD"));
         let result = [];
         for (let [day, statusDataPerDay] of Object.entries(machineStatusDataGroupByDay)) {
