@@ -5,6 +5,7 @@ const { getMachineStatus } = require("./UtilitiesService");
 const moment = require("moment-timezone");
 const constants = require("../constants/constants");
 const AvailabilityDay = require("../models/AvailabilityDay");
+const AvailabilityRealtime = require("../models/AvailabilityRealtime");
 
 module.exports = {
     async getStatusTimeline(params) {
@@ -63,7 +64,7 @@ module.exports = {
             }
         }
     },
-
+    
     async getSummaryStatus(params) {
         try {
             const { startTime, endTime, machineId } = params;
@@ -92,5 +93,25 @@ module.exports = {
                 error: err
             }
         }
-    }
+    },
+    async getPercentDiff(params) {
+        try {
+            const { startTime, endTime } = params;
+            const data = await AvailabilityRealtime.find({
+                logTime: {
+                    $gte: startTime,
+                    $lte: endTime
+                }
+            });
+            return {
+                status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
+                data: data
+            };
+        } catch (err) {
+            return {
+                status: constants.INTERNAL_ERROR,
+                error: err
+            }
+        }
+    },
 }

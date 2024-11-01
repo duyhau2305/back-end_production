@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const AvailabilityHourSchema = new mongoose.Schema({
   machineId: { type: String, required: true },
   logTime: { type: String, required: true }, 
-  runtime: { type: Number, required: true }, 
+  runTime: { type: Number, required: true }, 
+  idleTime :  { type: Number, required: true },
   offlineTime: { type: Number},
   stopTime: { type: Number, required: true },
 }, { timestamps: true });
