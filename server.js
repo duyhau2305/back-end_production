@@ -2,6 +2,8 @@ const express = require('express');
 const connectDB = require('./config/db'); 
 const cors = require('cors');
 const os = require('os');
+const https = require('https');
+const fs = require('fs');
 const moment = require('moment');
 const dotenv = require('dotenv');
 const userRouters = require('./routes/UserRoutes');
@@ -19,7 +21,7 @@ const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
 const dailyStatusService = require('./services/DailyStatusService');
-
+const machineRoutes =require('./routes/MachineRoute')
 const WorkshiftsR = require('./models/WorkshiftsR');
 const AvailabilityRealtime = require('./models/AvailabilityRealtime');
 const AvailabilityHour = require('./models/AvailabilityHour');
@@ -44,7 +46,11 @@ const getIPAddress = () => {
   }
   return '0.0.0.0';
 };
-
+app.use(express.json());
+const sslOptions = {
+  key: fs.readFileSync('ssl-certs/server.key'),
+  cert: fs.readFileSync('ssl-certs/server.crt')
+};
 connectDB();
 
 
@@ -102,7 +108,8 @@ connectDB();
 
 
 
-app.use('/api', dailyStatusRoutes);
+// app.use('/api', dailyStatusRoutes);
+app.use('/api', machineRoutes);
 app.use('/api/device-status', deviceStatusRoute);
 app.use('/api', userRouters);
 app.use('/api/areas', areaRoutes);
@@ -113,7 +120,11 @@ app.use('/api/workShifts', workShiftRoutes);
 app.use('/api/productiontask', productionTasktRoutes); 
 app.use('/api/downtime',downtimeRoute);
 app.use('/api/machine-operations', machineOperationsRoute);
-app.listen(PORT, '0.0.0.0', () => {
+// app.listen(PORT, '0.0.0.0', () => {
+//   const ipAddress = getIPAddress();
+//   console.log(`Server is running on http://${ipAddress}:${PORT}`);
+// });
+https.createServer(sslOptions, app).listen(5000, () => {
   const ipAddress = getIPAddress();
-  console.log(`Server is running on http://${ipAddress}:${PORT}`);
+  console.log(`Server is running on https://${ipAddress}:${PORT}`);
 });
