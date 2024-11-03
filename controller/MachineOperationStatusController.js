@@ -58,7 +58,6 @@ module.exports = {
             return HttpResponseService.success(res, constants.SUCCESS, filteredData);
         } catch (error) {
             return HttpResponseService.internalServerError(res, filteredData);
-
         }
     },
     async getPercentDiff(req, res) {
@@ -85,7 +84,6 @@ module.exports = {
             }, {});
     
             const resultsPercent = Object.values(groupedData).map(dataArray => {
-                // Gộp `runTime` theo ngày và tính tổng
                 const dailySums = dataArray.reduce((acc, item) => {
                     const dateKey = new Date(item.logTime).toISOString().split('T')[0];
                     if (!acc[dateKey]) {
@@ -96,8 +94,6 @@ module.exports = {
                 }, {});
     
                 const sortedData = Object.values(dailySums).sort((a, b) => new Date(a.logTime) - new Date(b.logTime));
-    
-                // Tính phần trăm chênh lệch
                 return sortedData.slice(1).map((current, index) => {
                     const previous = sortedData[index];
                     const percentageChange = previous.runTime === 0
@@ -107,7 +103,7 @@ module.exports = {
                     return {
                         logTime: current.logTime,
                         machineId: current.machineId,
-                        percentageChange: isFinite(percentageChange) ? percentageChange.toFixed(2) + '%' : 'N/A'
+                        percentageChange: isFinite(percentageChange) ? percentageChange.toFixed(2) + '%' : '0%'
                     };
                 });
             });
