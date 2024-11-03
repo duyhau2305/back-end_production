@@ -47,10 +47,6 @@ const getIPAddress = () => {
   return '0.0.0.0';
 };
 app.use(express.json());
-const sslOptions = {
-  key: fs.readFileSync('ssl-certs/server.key'),
-  cert: fs.readFileSync('ssl-certs/server.crt')
-};
 connectDB();
 
 
@@ -120,11 +116,7 @@ app.use('/api/workShifts', workShiftRoutes);
 app.use('/api/productiontask', productionTasktRoutes); 
 app.use('/api/downtime',downtimeRoute);
 app.use('/api/machine-operations', machineOperationsRoute);
-// app.listen(PORT, '0.0.0.0', () => {
-//   const ipAddress = getIPAddress();
-//   console.log(`Server is running on http://${ipAddress}:${PORT}`);
-// });
-https.createServer(sslOptions, app).listen(5000, () => {
+app.listen(PORT, '0.0.0.0', () => {
   const ipAddress = getIPAddress();
-  console.log(`Server is running on https://${ipAddress}:${PORT}`);
+  console.log(`Server is running on http://${ipAddress}:${PORT}`);
 });
