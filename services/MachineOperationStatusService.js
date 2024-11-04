@@ -224,14 +224,14 @@ module.exports = {
         const { startTime, endTime, machineId } = params;
         try {
             const currentTime = new Date();
-            const currentHourMinute = currentTime.getHours() * 60 + currentTime.getMinutes(); // Chuyển giờ hiện tại sang phút để so sánh
+            const currentHourMinute = currentTime.getHours() * 60 + currentTime.getMinutes();
 
             const productionTasks = await ProductionTask.aggregate([
                 {
                     $match: {
                         deviceName: machineId,
                         date: {
-                            $gte: new Date(currentTime.setHours(0, 0, 0, 0)), // Lấy bản ghi có date là hôm nay
+                            $gte: new Date(currentTime.setHours(0, 0, 0, 0)),
                             $lte: new Date(currentTime.setHours(23, 59, 59, 999))
                         }
                     }
