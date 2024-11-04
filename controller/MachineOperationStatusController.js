@@ -158,7 +158,6 @@ module.exports = {
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         timelineEndTime: lastInterval?.endTime,
                         timelineStartTime: lastInterval?.startTime,
-                        timeline: timeline
                     };
                 })
             );
