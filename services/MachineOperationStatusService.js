@@ -6,6 +6,7 @@ const moment = require("moment-timezone");
 const constants = require("../constants/constants");
 const AvailabilityDay = require("../models/AvailabilityDay");
 const AvailabilityRealtime = require("../models/AvailabilityRealtime");
+const UtilitiesService = require("./UtilitiesService");
 
 module.exports = {
     async getStatusTimeline(params) {
@@ -94,6 +95,39 @@ module.exports = {
             }
         }
     },
+
+    async getCurrentStatus(machineId) {
+        try {
+            const machineProfile = await Device.findById(machineId);
+            if (!machineProfile) {
+                return {
+                    status: constants.RESOURCE_NOT_FOUND,
+                    data: machineId
+                }
+            }
+            const keys = [machineProfile.operationStatusKey];
+            const thingsboardData = await ThingboardService.getLatestTelemetryDataByDeviceId(machineProfile.tbDeviceId, keys);
+            const machineStatusData = thingsboardData[machineProfile.operationStatusKey] ?? [];
+            let status = 'Offline';
+            let currentTs = new Date().getTime();
+            if (machineStatusData.length) {
+                let latestStatus = UtilitiesService.getMachineStatus(parseInt(machineStatusData[0].value));
+                let latestTs = parseInt(machineStatusData[0].ts);
+                status = (currentTs - latestTs < 15 * 60 * 1000) ? latestStatus : status;
+            }
+            
+            return {
+                status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
+                data: status
+            }
+        } catch (err) {
+            return {
+                status: constants.INTERNAL_ERROR,
+                error: err
+            }
+        }
+    },
+
     async getPercentDiff(params) {
         try {
             const { startTime, endTime } = params;

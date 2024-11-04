@@ -63,5 +63,16 @@ module.exports = {
     } catch (error) {
       throw error;
     }
+  },
+  async getLatestTelemetryDataByDeviceId(deviceId, keys) {
+    try {
+      let keysString = keys.length ? keys.join(',') : ' ';
+      const buildUrl = `${THINGBOARD_API_URL}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=${keysString}`;
+      const response = await instance.get(buildUrl);
+      logger.info(`${serviceName}.getLatestTelemetryDataByDeviceId() - Get telemetry data by device id = ${deviceId} success.`)
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 }
