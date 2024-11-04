@@ -53,66 +53,123 @@ module.exports = {
     },
     async getMachine(req, res) {
         try {
-            const devices = await Device.find({}, '_id operationStatusKey');
-            const filteredData = devices.map(({ _id, operationStatusKey }) => ({ _id, operationStatusKey }));
+            const devices = await Device.find({}, '_id operationStatusKey deviceId');
+            const filteredData = devices.map(({ _id, operationStatusKey, deviceId }) => ({ _id, operationStatusKey, deviceId }));
             return HttpResponseService.success(res, constants.SUCCESS, filteredData);
         } catch (error) {
             return HttpResponseService.internalServerError(res, filteredData);
         }
     },
-    async getPercentDiff(req, res) {
+    // async getPercentDiff(req, res) {
+    //     try {
+
+    //         const { startTime, endTime } = req.query;
+    //         const params = { startTime, endTime };
+    //         const getSummaryStatus = await MachineOperationStatusService.getPercentDiff(params);
+
+    //         if (getSummaryStatus.status !== constants.RESOURCE_SUCCESSFULLY_FETCHED) {
+    //             const errMsg = `No machine found with id = ${machineId}`;
+    //             return getSummaryStatus.status === constants.RESOURCE_NOT_FOUND
+    //                 ? HttpResponseService.notFound(res, errMsg)
+    //                 : HttpResponseService.internalServerError(res, getSummaryStatus);
+    //         }
+
+    //         const groupedData = getSummaryStatus.data.reduce((acc, item) => {
+    //             if (!acc[item.machineId]) acc[item.machineId] = [];
+    //             acc[item.machineId].push({
+    //                 logTime: item.logTime,
+    //                 machineId: item.machineId,
+    //                 runTime: item.runTime
+    //             });
+    //             return acc;
+    //         }, {});
+
+    //         const resultsPercent = Object.values(groupedData).map(dataArray => {
+    //             const dailySums = dataArray.reduce((acc, item) => {
+    //                 const dateKey = new Date(item.logTime).toISOString().split('T')[0];
+    //                 if (!acc[dateKey]) {
+    //                     acc[dateKey] = { logTime: dateKey, machineId: item.machineId, runTime: 0 };
+    //                 }
+    //                 acc[dateKey].runTime += item.runTime;
+    //                 return acc;
+    //             }, {});
+
+    //             const sortedData = Object.values(dailySums).sort((a, b) => new Date(a.logTime) - new Date(b.logTime));
+    //             return sortedData.slice(1).map((current, index) => {
+    //                 const previous = sortedData[index];
+    //                 const percentageChange = previous.runTime === 0
+    //                     ? current.runTime + '%'
+    //                     : ((current.runTime - previous.runTime) / previous.runTime) * 100;
+
+    //                 return {
+    //                     logTime: current.logTime,
+    //                     machineId: current.machineId,
+    //                     percentageChange: isFinite(percentageChange) ? percentageChange.toFixed(2) + '%' : '0%'
+    //                 };
+    //             });
+    //         });
+
+    //         return HttpResponseService.success(res, constants.SUCCESS, resultsPercent);
+    //     } catch (error) {
+    //         return HttpResponseService.internalServerError(res, error);
+    //     }
+    // },
+
+    async getInformationAllMachine(req, res) {
         try {
             const { startTime, endTime } = req.query;
-            const params = { startTime, endTime };
-            const getSummaryStatus = await MachineOperationStatusService.getPercentDiff(params);
-    
-            if (getSummaryStatus.status !== constants.RESOURCE_SUCCESSFULLY_FETCHED) {
-                const errMsg = `No machine found with id = ${machineId}`;
-                return getSummaryStatus.status === constants.RESOURCE_NOT_FOUND
-                    ? HttpResponseService.notFound(res, errMsg)
-                    : HttpResponseService.internalServerError(res, getSummaryStatus);
+            if (!startTime || !endTime) {
+                return HttpResponseService.badRequest(res, "Start time and end time are required.");
             }
-    
-            const groupedData = getSummaryStatus.data.reduce((acc, item) => {
-                if (!acc[item.machineId]) acc[item.machineId] = [];
-                acc[item.machineId].push({
-                    logTime: item.logTime,
-                    machineId: item.machineId,
-                    runTime: item.runTime
-                });
-                return acc;
-            }, {});
-    
-            const resultsPercent = Object.values(groupedData).map(dataArray => {
-                const dailySums = dataArray.reduce((acc, item) => {
-                    const dateKey = new Date(item.logTime).toISOString().split('T')[0];
-                    if (!acc[dateKey]) {
-                        acc[dateKey] = { logTime: dateKey, machineId: item.machineId, runTime: 0 };
-                    }
-                    acc[dateKey].runTime += item.runTime;
-                    return acc;
-                }, {});
-    
-                const sortedData = Object.values(dailySums).sort((a, b) => new Date(a.logTime) - new Date(b.logTime));
-                return sortedData.slice(1).map((current, index) => {
-                    const previous = sortedData[index];
-                    const percentageChange = previous.runTime === 0
-                        ? current.runTime + '%'
-                        : ((current.runTime - previous.runTime) / previous.runTime) * 100;
-    
-                    return {
-                        logTime: current.logTime,
-                        machineId: current.machineId,
-                        percentageChange: isFinite(percentageChange) ? percentageChange.toFixed(2) + '%' : '0%'
-                    };
-                });
+            const allMachine = await MachineOperationStatusService.getAllMachine();
+            if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
+                return HttpResponseService.notFound(res, "No machines found.");
+            }
+            if (allMachine.status !== constants.RESOURCE_SUCCESSFULLY_FETCHED) {
+                return HttpResponseService.internalServerError(res, allMachine);
+            }
+            const createParams = (machineId, isSummary = false) => ({
+                machineId,
+                startTime: startTime,
+                endTime: endTime,
+                ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
     
-            return HttpResponseService.success(res, constants.SUCCESS, resultsPercent);
+            const result = await Promise.all(
+                allMachine.data.map(async (machine) => {
+                    const paramsProductionTask = createParams(machine.deviceId);
+                    const paramsSummary = createParams(machine._id, true);
+                    const timelineParams = createParams(machine._id);
+    
+                    const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
+                        MachineOperationStatusService.getCurrentStatus(machine._id),
+                        MachineOperationStatusService.getProductionTask(paramsProductionTask),
+                        MachineOperationStatusService.getPercentDiff(paramsSummary),
+                        MachineOperationStatusService.getSummaryStatus(paramsSummary),
+                    ]);
+                    const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
+
+                    const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
+                    return {
+                        ...machine,
+                        currentStatus: currentStatus.data,
+                        productionTasks: productionTasks.data,
+                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange || 0,
+                        summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
+                        timelineEndTime: lastInterval?.endTime,
+                        timelineStartTime: lastInterval?.startTime,
+                        timeline: timeline
+                    };
+                })
+            );
+    
+            return HttpResponseService.success(res, constants.SUCCESS, result);
         } catch (error) {
+            console.error("Error in getInformationAllMachine:", error);
             return HttpResponseService.internalServerError(res, error);
         }
     }
     
+
 
 }

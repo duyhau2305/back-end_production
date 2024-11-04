@@ -54,6 +54,7 @@ instance.interceptors.response.use((response) => response, (error) => {
 
 module.exports = {
   async getTelemetryDataByDeviceId(deviceId, startTs, endTs, keys) {
+
     try {
       let keysString = keys.length ? keys.join(',') : ' ';
       const buildUrl = `${THINGBOARD_API_URL}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=${keysString}&limit=${MAX_RECORD_FETCHED}&startTs=${startTs}&endTs=${endTs}`;
