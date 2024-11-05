@@ -2,6 +2,7 @@ const constants = require("../constants/constants");
 const Device = require("../models/Device");
 const HttpResponseService = require("../services/HttpResponseService");
 const MachineOperationStatusService = require("../services/MachineOperationStatusService");
+const moment = require('moment');
 
 module.exports = {
     async getStatusTimeline(req, res) {
@@ -117,10 +118,9 @@ module.exports = {
 
     async getInformationAllMachine(req, res) {
         try {
-            const { startTime, endTime } = req.query;
-            if (!startTime || !endTime) {
-                return HttpResponseService.badRequest(res, "Start time and end time are required.");
-            }
+            const startTime = moment().subtract(1, 'days').startOf('day').toISOString();
+            const endTime = moment().toISOString();
+            console.log(endTime)
             const allMachine = await MachineOperationStatusService.getAllMachine();
             if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
                 return HttpResponseService.notFound(res, "No machines found.");
@@ -143,7 +143,7 @@ module.exports = {
     
                     const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
                         MachineOperationStatusService.getCurrentStatus(machine._id),
-                        MachineOperationStatusService.getProductionTask(paramsProductionTask),
+                        MachineOperationStatusService.getProductionTask(paramsProductionTask , 'machine'),
                         MachineOperationStatusService.getPercentDiff(paramsSummary),
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
@@ -154,8 +154,10 @@ module.exports = {
                         ...machine,
                         currentStatus: currentStatus.data,
                         productionTasks: productionTasks.data,
-                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange || 0,
+                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
+                        summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
+                        summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
                         timelineEndTime: lastInterval?.endTime,
                         timelineStartTime: lastInterval?.startTime,
                     };
@@ -167,7 +169,59 @@ module.exports = {
             console.error("Error in getInformationAllMachine:", error);
             return HttpResponseService.internalServerError(res, error);
         }
-    }
+    }, 
+    async getInformationAnalysis(req, res) {
+        try {
+            const { startTime, endTime } = req.query;
+            const allMachine = await MachineOperationStatusService.getAllMachine();
+            if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
+                return HttpResponseService.notFound(res, "No machines found.");
+            }
+            if (allMachine.status !== constants.RESOURCE_SUCCESSFULLY_FETCHED) {
+                return HttpResponseService.internalServerError(res, allMachine);
+            }
+            const createParams = (machineId, isSummary = false) => ({
+                machineId,
+                startTime: startTime,
+                endTime: endTime,
+                ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
+            });
+    
+            const result = await Promise.all(
+                allMachine.data.map(async (machine) => {
+                    const paramsProductionTask = createParams(machine.deviceId);
+                    const paramsSummary = createParams(machine._id, true);
+                    const timelineParams = createParams(machine._id);
+    
+                    const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
+                        MachineOperationStatusService.getCurrentStatus(machine._id),
+                        MachineOperationStatusService.getProductionTask(paramsProductionTask , 'analysis'),
+                        MachineOperationStatusService.getPercentDiff(paramsSummary),
+                        MachineOperationStatusService.getSummaryStatus(paramsSummary),
+                    ]);
+                    const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
+
+                    const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
+                    return {
+                        ...machine,
+                        currentStatus: currentStatus.data,
+                        productionTasks: productionTasks.data,
+                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange,
+                        summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
+                        summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
+                        summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
+                        timelineEndTime: lastInterval?.endTime,
+                        timelineStartTime: lastInterval?.startTime,
+                    };
+                })
+            );
+    
+            return HttpResponseService.success(res, constants.SUCCESS, result);
+        } catch (error) {
+            console.error("Error in getInformationAllMachine:", error);
+            return HttpResponseService.internalServerError(res, error);
+        }
+    }, 
     
 
 

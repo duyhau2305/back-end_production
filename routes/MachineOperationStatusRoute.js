@@ -6,5 +6,6 @@ router.get('/:machineId/summary-status', MachineOperationStatusController.getSum
 router.get('/machineOperations', MachineOperationStatusController.getMachine);
 // router.get('/percentDiff', MachineOperationStatusController.getPercentDiff);
 router.get('/machine-information', MachineOperationStatusController.getInformationAllMachine);
+router.get('/machine-analysis', MachineOperationStatusController.getInformationAnalysis);
 
 module.exports = router;

@@ -187,10 +187,18 @@ module.exports = {
             const resultsPercent = Object.values(groupedData).map(dataArray => {
                 const dailySums = dataArray.reduce((acc, item) => {
                     const dateKey = new Date(item.logTime).toISOString().split('T')[0];
-                    if (!acc[dateKey]) {
-                        acc[dateKey] = { logTime: dateKey, machineId: item.machineId, runTime: 0 };
+                    const itemLogTime = new Date(item.logTime);
+                    const currentTime = new Date();
+                    const itemHour = itemLogTime.getHours();
+                    const itemMinute = itemLogTime.getMinutes();
+                    const currentHour = currentTime.getHours();
+                    const currentMinute = currentTime.getMinutes();
+                    if (itemHour < currentHour || (itemHour === currentHour && itemMinute < currentMinute)) {
+                        if (!acc[dateKey]) {
+                            acc[dateKey] = { logTime: dateKey, machineId: item.machineId, runTime: 0 };
+                        }
+                        acc[dateKey].runTime += item.runTime;
                     }
-                    acc[dateKey].runTime += item.runTime;
                     return acc;
                 }, {});
                 const sortedData = Object.values(dailySums).sort((a, b) => new Date(a.logTime) - new Date(b.logTime));
@@ -220,19 +228,29 @@ module.exports = {
         }
     },
 
-    async getProductionTask(params) {
+    async getProductionTask(params, type) {
         const { startTime, endTime, machineId } = params;
         try {
-            const currentTime = new Date();
-            const currentHourMinute = currentTime.getHours() * 60 + currentTime.getMinutes();
-
+            let todayStart;
+            let todayEnd;
+            if (type === 'machine') {
+                todayStart = new Date();
+                todayStart.setUTCHours(0, 0, 0, 0);
+                todayEnd = new Date();
+                todayEnd.setUTCHours(23, 59, 59, 999);
+            } else {
+                todayStart = new Date(startTime);
+                todayStart.setUTCHours(0, 0, 0, 0);
+                todayEnd = new Date(endTime);
+                todayEnd.setUTCHours(23, 59, 59, 999);
+            }
             const productionTasks = await ProductionTask.aggregate([
                 {
                     $match: {
-                        deviceName: machineId,
+                        deviceId: machineId,
                         date: {
-                            $gte: new Date(currentTime.setHours(0, 0, 0, 0)),
-                            $lte: new Date(currentTime.setHours(23, 59, 59, 999))
+                            $gte: todayStart,
+                            $lte: todayEnd
                         }
                     }
                 },
@@ -268,20 +286,11 @@ module.exports = {
                     }
                 },
                 {
-                    $match: {
-                        $expr: {
-                            $and: [
-                                { $lte: ["$shiftStartMinutes", currentHourMinute] },
-                                { $gte: ["$shiftEndMinutes", currentHourMinute] }
-                            ]
-                        }
-                    }
-                },
-                {
                     $group: {
                         _id: "$_id",
-                        shifts: {
-                            $push: {
+                        date: { $first: "$date" }, // Lấy trường date từ document gốc
+                        shift: {
+                            $first: {
                                 employeeName: "$shifts.employeeName",
                                 status: "$shifts.status",
                                 startTime: "$shiftDetails.startTime",
@@ -294,11 +303,23 @@ module.exports = {
                 },
                 {
                     $project: {
-                        shifts: 1
+                        date: 1, // Bao gồm trường date trong kết quả
+                        shift: 1
                     }
                 }
             ]);
-
+            
+            // const todayStart = new Date();
+            // todayStart.setUTCHours(0, 0, 0, 0);
+            // const tomorrowStart = new Date(todayStart);
+            // tomorrowStart.setDate(todayStart.getDate() + 1);
+            // const productionTasks = await ProductionTask.find({
+            //     deviceId: machineId,
+            //     date: {
+            //         $gte: todayStart,
+            //         $lt: tomorrowStart
+            //     }
+            // });
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
                 data: productionTasks
