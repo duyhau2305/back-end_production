@@ -3,6 +3,7 @@ const Device = require("../models/Device");
 const HttpResponseService = require("../services/HttpResponseService");
 const MachineOperationStatusService = require("../services/MachineOperationStatusService");
 const moment = require('moment');
+const ThingboardService = require("../services/ThingboardService");
 
 module.exports = {
     async getStatusTimeline(req, res) {
@@ -134,16 +135,16 @@ module.exports = {
                 endTime: endTime,
                 ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
-    
+
             const result = await Promise.all(
                 allMachine.data.map(async (machine) => {
                     const paramsProductionTask = createParams(machine.deviceId);
                     const paramsSummary = createParams(machine._id, true);
                     const timelineParams = createParams(machine._id);
-    
+
                     const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
                         MachineOperationStatusService.getCurrentStatus(machine._id),
-                        MachineOperationStatusService.getProductionTask(paramsProductionTask , 'machine'),
+                        MachineOperationStatusService.getProductionTask(paramsProductionTask, 'machine'),
                         MachineOperationStatusService.getPercentDiff(paramsSummary),
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
@@ -163,13 +164,13 @@ module.exports = {
                     };
                 })
             );
-    
+
             return HttpResponseService.success(res, constants.SUCCESS, result);
         } catch (error) {
             console.error("Error in getInformationAllMachine:", error);
             return HttpResponseService.internalServerError(res, error);
         }
-    }, 
+    },
     async getInformationAnalysis(req, res) {
         try {
             const { startTime, endTime } = req.query;
@@ -186,16 +187,16 @@ module.exports = {
                 endTime: endTime,
                 ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
-    
+
             const result = await Promise.all(
                 allMachine.data.map(async (machine) => {
                     const paramsProductionTask = createParams(machine.deviceId);
                     const paramsSummary = createParams(machine._id, true);
                     const timelineParams = createParams(machine._id);
-    
+
                     const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
                         MachineOperationStatusService.getCurrentStatus(machine._id),
-                        MachineOperationStatusService.getProductionTask(paramsProductionTask , 'analysis'),
+                        MachineOperationStatusService.getProductionTask(paramsProductionTask, 'analysis'),
                         MachineOperationStatusService.getPercentDiff(paramsSummary),
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
@@ -215,14 +216,28 @@ module.exports = {
                     };
                 })
             );
-    
+
             return HttpResponseService.success(res, constants.SUCCESS, result);
         } catch (error) {
             console.error("Error in getInformationAllMachine:", error);
             return HttpResponseService.internalServerError(res, error);
         }
-    }, 
-    
+    },
+    async callRpc(req, res) {
+        const {deviceId , controlKey ,value} = req.body;
+        const params = {deviceId : deviceId , controlKey : controlKey , value : value}
+        try {
+            console.log(params)
+
+            const callRpc =await ThingboardService.callRpc(params)
+            return HttpResponseService.success(res, constants.SUCCESS, callRpc);
+
+        } catch (error) {
+            console.error("Error in getInformationAllMachine:", error);
+            return HttpResponseService.internalServerError(res, error);
+
+        }
+    },
 
 
 }

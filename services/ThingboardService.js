@@ -75,5 +75,20 @@ module.exports = {
     } catch (error) {
       throw error;
     }
+  },
+  async callRpc(params) {
+    console.log(params)
+    try {
+      const buildUrl = `${THINGBOARD_API_URL}/api/rpc/oneway/${params.deviceId}`;
+      const response = await instance.post(buildUrl , {
+        method: params.controlKey,
+        params: params.value,
+        timeout: 500
+      });
+      logger.info(`${serviceName}.getLatestTelemetryDataByDeviceId() - Get telemetry data by device id = ${params.deviceId} success.`)
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 }
