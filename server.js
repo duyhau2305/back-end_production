@@ -16,6 +16,7 @@ const workShiftRoutes = require('./routes/WorkShiftRoutes')
 const productionTasktRoutes = require('./routes/ProductionTaskRouter');
 const downtimeRoute = require('./routes/DowntimeRoute');
 const machineOperationsRoute = require('./routes/MachineOperationStatusRoute');
+const cron = require('node-cron');
 
 const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
@@ -27,6 +28,8 @@ const AvailabilityRealtime = require('./models/AvailabilityRealtime');
 const AvailabilityHour = require('./models/AvailabilityHour');
 const AvailabilityDay = require('./models/AvailabilityDay');
 const MachineOperations = require('./models/machineOperations');
+const ProductionTask = require('./models/ProductionTask');
+const ThingboardService = require('./services/ThingboardService');
 
 dotenv.config(); 
 
@@ -48,8 +51,85 @@ const getIPAddress = () => {
 };
 app.use(express.json());
 connectDB();
+const fetchProductionTasksForToday = async () => {
+  try {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(startOfDay.getDate() + 1);
 
+    let shiftNameCondition;
+    if (hours >= 8 && (hours < 17 || (hours === 17 && minutes <= 20))) {
+      shiftNameCondition = "Ca chính";
+    } else if (hours === 17 && minutes > 20 && (hours < 18 || (hours === 18 && minutes <= 20))) {
+      shiftNameCondition = "Ca phụ 1h";
+    } else if ((hours === 17 && minutes > 20) || hours === 18 || (hours === 19 && minutes <= 20)) {
+      shiftNameCondition = "Ca phụ 2h";
+    }
 
+    const query = {
+      date: { $gte: startOfDay, $lt: endOfDay },
+      ...(shiftNameCondition && {
+        shifts: { $elemMatch: { shiftName: shiftNameCondition } }
+      })
+    };
+
+    const tasks = await ProductionTask.find(query, 'deviceName shifts.status');
+    console.log("Danh sách bản ghi:", tasks);
+
+    const statusMap = {
+      "Chạy": 1,
+      "Dừng": 3,
+      "Chờ": 2
+    };
+
+    const callRpcWithRetry = async (params, retries = 3) => {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          return await ThingboardService.callRpc(params);
+        } catch (error) {
+          if (attempt === retries - 1) throw error;
+          console.warn(`Attempt ${attempt + 1} failed. Retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    };
+
+    const results = await Promise.all(
+      tasks.map(async (task) => {
+        const status = statusMap[task.shifts[0].status] || 0;
+        const params = {
+          deviceId: '43636810-8e2f-11ef-a040-4d4ce340ad51',
+          controlKey: `${task.deviceName}_Control`,
+          value: status
+        };
+
+        try {
+          const callRpcResult = await callRpcWithRetry(params);
+          return { taskId: task._id, success: true, result: callRpcResult };
+        } catch (error) {
+          console.error(`Lỗi khi gọi RPC cho task ${task._id}:`, {
+            message: error.message,
+            code: error.code,
+            status: error.response?.status,
+            data: error.response?.data,
+            headers: error.response?.headers,
+          });
+          return { taskId: task._id, success: false, error };
+        }
+      })
+    );
+
+    console.log("Kết quả xử lý tất cả các tác vụ:", results);
+  } catch (error) {
+    console.error("Lỗi khi truy vấn dữ liệu:", error);
+  }
+};
+
+cron.schedule('*/5 * * * *', fetchProductionTasksForToday);
+fetchProductionTasksForToday();
 // const fetchAndSaveTelemetryDataType = async (type) => {
 //   try {
 //     console.log('Fetching and saving telemetry data...');

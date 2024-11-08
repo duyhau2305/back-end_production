@@ -4,6 +4,8 @@ const HttpResponseService = require("../services/HttpResponseService");
 const MachineOperationStatusService = require("../services/MachineOperationStatusService");
 const moment = require('moment');
 const ThingboardService = require("../services/ThingboardService");
+const cron = require('node-cron');
+const cronTasks = new Map(); 
 
 module.exports = {
     async getStatusTimeline(req, res) {
@@ -223,21 +225,70 @@ module.exports = {
             return HttpResponseService.internalServerError(res, error);
         }
     },
-    async callRpc(req, res) {
-        const {deviceId , controlKey ,value} = req.body;
-        const params = {deviceId : deviceId , controlKey : controlKey , value : value}
-        try {
-            console.log(params)
+    // async callRpc(req, res) {
+    //     const { deviceId, controlKey, value, index, dates } = req.body;
+    //     const params = { deviceId, controlKey, value };
+    //     console.log(dates);
+    //     try {
+    //         if (index == 0) {
+    //             const callRpcResult = await ThingboardService.callRpc(params);
+    //             return HttpResponseService.success(res, constants.SUCCESS, callRpcResult);
+    //         } else {
+    //             const [year, month, day] = dates.split('-');
+    //             const cronExpression = `0 0 ${day} ${month} *`; 
+    //             const task = cron.schedule(cronExpression, async () => {
+    //                 try {
+    //                     const callRpcResult = await ThingboardService.callRpc(params);
+    //                     if (!res.headersSent) {
+    //                         HttpResponseService.success(res, constants.SUCCESS, callRpcResult);
+    //                     }
+    //                     setTimeout(async () => {
+    //                         try {
+    //                             const secondCallResult = await ThingboardService.callRpc(params);
+    //                             if (!res.headersSent) {
+    //                                 HttpResponseService.success(res, constants.SUCCESS, secondCallResult);
+    //                             }
+    //                         } catch (error) {
+    //                             if (!res.headersSent) {
+    //                                 HttpResponseService.internalServerError(res, error);
+    //                             }
+    //                         } finally {
+    //                             task.stop();
+    //                         }
+    //                     }, 60000);
+    //                 } catch (error) {
+    //                     if (!res.headersSent) {
+    //                         HttpResponseService.internalServerError(res, error);
+    //                     }
+    //                     task.stop();
+    //                 }
+    //             });
+    //             cronTasks.set(controlKey, task);
 
-            const callRpc =await ThingboardService.callRpc(params)
-            return HttpResponseService.success(res, constants.SUCCESS, callRpc);
-
-        } catch (error) {
-            console.error("Error in getInformationAllMachine:", error);
-            return HttpResponseService.internalServerError(res, error);
-
-        }
-    },
+    //             if (!res.headersSent) {
+    //                 return HttpResponseService.success(res, constants.SUCCESS, {
+    //                     message: `RPC call has been scheduled for ${dates}.`
+    //                 });
+    //             }
+    //         }
+    //     } catch (error) {
+    //         if (!res.headersSent) {
+    //             return HttpResponseService.internalServerError(res, error);
+    //         }
+    //     }
+    // },
+    // async cancelScheduledTask(req, res) {
+    //     const machineId = req.body.machineId
+    //     const task = cronTasks.get(machineId);
+    //     if (task) {
+    //         task.stop();
+    //         cronTasks.delete(machineId);
+    //         return { success: true, message: `Task for machineId ${machineId} has been canceled.` };
+    //     } else {
+    //         return { success: false, message: `No task found for deviceId ${machineId}.` };
+    //     }
+    // }
+    
 
 
 }

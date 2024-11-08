@@ -288,7 +288,7 @@ module.exports = {
                 {
                     $group: {
                         _id: "$_id",
-                        date: { $first: "$date" }, // Lấy trường date từ document gốc
+                        date: { $first: "$date" }, 
                         shift: {
                             $first: {
                                 employeeName: "$shifts.employeeName",
@@ -303,7 +303,7 @@ module.exports = {
                 },
                 {
                     $project: {
-                        date: 1, // Bao gồm trường date trong kết quả
+                        date: 1, 
                         shift: 1
                     }
                 }

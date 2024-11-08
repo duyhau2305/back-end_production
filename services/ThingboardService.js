@@ -77,7 +77,9 @@ module.exports = {
     }
   },
   async callRpc(params) {
+    console.log("join here")
     console.log(params)
+
     try {
       const buildUrl = `${THINGBOARD_API_URL}/api/rpc/oneway/${params.deviceId}`;
       const response = await instance.post(buildUrl , {
