@@ -5,7 +5,7 @@ const MachineOperationStatusService = require("../services/MachineOperationStatu
 const moment = require('moment');
 const ThingboardService = require("../services/ThingboardService");
 const cron = require('node-cron');
-const cronTasks = new Map(); 
+const cronTasks = new Map();
 
 module.exports = {
     async getStatusTimeline(req, res) {
@@ -123,7 +123,6 @@ module.exports = {
         try {
             const startTime = moment().subtract(1, 'days').startOf('day').toISOString();
             const endTime = moment().toISOString();
-            console.log(endTime)
             const allMachine = await MachineOperationStatusService.getAllMachine();
             if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
                 return HttpResponseService.notFound(res, "No machines found.");
@@ -157,7 +156,7 @@ module.exports = {
                         ...machine,
                         currentStatus: currentStatus.data,
                         productionTasks: productionTasks.data,
-                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange,
+                        percentDiff: percentDiff.data?.[0]?.[0]?.runTimeDifference,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
                         summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
@@ -190,41 +189,56 @@ module.exports = {
                 ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
 
+            const summaryStatuses = await MachineOperationStatusService.getSummaryStatus(createParams(allMachine.data.map(machine => machine._id), true));
+
             const result = await Promise.all(
-                allMachine.data.map(async (machine) => {
+                allMachine.data.map(async (machine, index) => {
                     const paramsProductionTask = createParams(machine.deviceId);
                     const paramsSummary = createParams(machine._id, true);
                     const timelineParams = createParams(machine._id);
 
-                    const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
+                    const [currentStatus, productionTasks] = await Promise.all([
                         MachineOperationStatusService.getCurrentStatus(machine._id),
                         MachineOperationStatusService.getProductionTask(paramsProductionTask, 'analysis'),
-                        MachineOperationStatusService.getPercentDiff(paramsSummary),
-                        MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
                     const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
-
                     const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
+
+                    const summaryStatusByMachine = await summaryStatuses.data.filter(value => {
+
+                        return value.machineId == machine._id
+                    })
+
                     return {
                         ...machine,
                         currentStatus: currentStatus.data,
                         productionTasks: productionTasks.data,
-                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange,
-                        summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
-                        summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
-                        summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
+                        summaryStatus: summaryStatusByMachine,
                         timelineEndTime: lastInterval?.endTime,
                         timelineStartTime: lastInterval?.startTime,
                     };
                 })
             );
-
+            // .data?.[0]?.runTime || 0
             return HttpResponseService.success(res, constants.SUCCESS, result);
         } catch (error) {
             console.error("Error in getInformationAllMachine:", error);
             return HttpResponseService.internalServerError(res, error);
         }
     },
+    async getTopTenRunTime(req, res) {
+        try {
+            
+            const { startTime, endTime , type } = req.query;
+            const params = { startTime, endTime , type };
+            const getTopTen =await MachineOperationStatusService.getTopTen(params)
+            return HttpResponseService.success(res, constants.SUCCESS, getTopTen);
+
+        } catch (error) {
+            console.error("Error in getTopTenRunTime:", error);
+            return HttpResponseService.internalServerError(res, error);
+        }
+    }
     // async callRpc(req, res) {
     //     const { deviceId, controlKey, value, index, dates } = req.body;
     //     const params = { deviceId, controlKey, value };
@@ -288,7 +302,7 @@ module.exports = {
     //         return { success: false, message: `No task found for deviceId ${machineId}.` };
     //     }
     // }
-    
+
 
 
 }

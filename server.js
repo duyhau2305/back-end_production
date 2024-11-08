@@ -77,7 +77,6 @@ const fetchProductionTasksForToday = async () => {
     };
 
     const tasks = await ProductionTask.find(query, 'deviceName shifts.status');
-    console.log("Danh sách bản ghi:", tasks);
 
     const statusMap = {
       "Chạy": 1,
@@ -122,7 +121,6 @@ const fetchProductionTasksForToday = async () => {
       })
     );
 
-    console.log("Kết quả xử lý tất cả các tác vụ:", results);
   } catch (error) {
     console.error("Lỗi khi truy vấn dữ liệu:", error);
   }

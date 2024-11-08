@@ -69,6 +69,7 @@ module.exports = {
     },
 
     async getSummaryStatus(params) {
+        console.log(params)
         try {
             const { startTime, endTime, machineId } = params;
             const machineProfile = await Device.findById(machineId);
@@ -167,7 +168,10 @@ module.exports = {
     async getPercentDiff(params) {
 
         try {
-            const { startTime, endTime, machineId } = params;
+            const { machineId } = params;
+            // const { startTime, endTime, machineId } = params;
+            const startTime = moment().subtract(1, 'days').startOf('day').format('YYYY-MM-DDTHH:mm:ss.SSS');
+            const endTime = moment().format('YYYY-MM-DDTHH:mm:ss.SSS');
             const getSummaryStatus = await AvailabilityHour.find({
                 machineId: machineId,
                 logTime: {
@@ -175,6 +179,7 @@ module.exports = {
                     $lte: endTime
                 }
             });
+
             const groupedData = getSummaryStatus.reduce((acc, item) => {
                 if (!acc[item.machineId]) acc[item.machineId] = [];
                 acc[item.machineId].push({
@@ -184,7 +189,8 @@ module.exports = {
                 });
                 return acc;
             }, {});
-            const resultsPercent = Object.values(groupedData).map(dataArray => {
+
+            const resultsDiff = Object.values(groupedData).map(dataArray => {
                 const dailySums = dataArray.reduce((acc, item) => {
                     const dateKey = new Date(item.logTime).toISOString().split('T')[0];
                     const itemLogTime = new Date(item.logTime);
@@ -193,6 +199,7 @@ module.exports = {
                     const itemMinute = itemLogTime.getMinutes();
                     const currentHour = currentTime.getHours();
                     const currentMinute = currentTime.getMinutes();
+
                     if (itemHour < currentHour || (itemHour === currentHour && itemMinute < currentMinute)) {
                         if (!acc[dateKey]) {
                             acc[dateKey] = { logTime: dateKey, machineId: item.machineId, runTime: 0 };
@@ -201,30 +208,30 @@ module.exports = {
                     }
                     return acc;
                 }, {});
+
                 const sortedData = Object.values(dailySums).sort((a, b) => new Date(a.logTime) - new Date(b.logTime));
+
                 return sortedData.slice(1).map((current, index) => {
                     const previous = sortedData[index];
-                    const percentageChange = previous.runTime === 0
-                        ? current.runTime + '%'
-                        : ((current.runTime - previous.runTime) / previous.runTime) * 100;
+                    const difference = current.runTime - previous.runTime;
 
                     return {
                         logTime: current.logTime,
                         machineId: current.machineId,
-                        percentageChange: isFinite(percentageChange) ? percentageChange.toFixed(2) + '%' : '0%'
+                        runTimeDifference: difference/60
                     };
                 });
             });
 
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
-                data: resultsPercent
+                data: resultsDiff
             };
         } catch (error) {
             return {
                 status: constants.INTERNAL_ERROR,
                 error: error
-            }
+            };
         }
     },
 
@@ -244,6 +251,7 @@ module.exports = {
                 todayEnd = new Date(endTime);
                 todayEnd.setUTCHours(23, 59, 59, 999);
             }
+
             const productionTasks = await ProductionTask.aggregate([
                 {
                     $match: {
@@ -273,14 +281,52 @@ module.exports = {
                     $addFields: {
                         shiftStartMinutes: {
                             $add: [
-                                { $multiply: [{ $toInt: { $substr: ["$shiftDetails.startTime", 0, 2] } }, 60] },
-                                { $toInt: { $substr: ["$shiftDetails.startTime", 3, 2] } }
+                                {
+                                    $multiply: [
+                                        {
+                                            $convert: {
+                                                input: { $substr: ["$shiftDetails.startTime", 0, 2] },
+                                                to: "int",
+                                                onError: 0,
+                                                onNull: 0
+                                            }
+                                        },
+                                        60
+                                    ]
+                                },
+                                {
+                                    $convert: {
+                                        input: { $substr: ["$shiftDetails.startTime", 3, 2] },
+                                        to: "int",
+                                        onError: 0,
+                                        onNull: 0
+                                    }
+                                }
                             ]
                         },
                         shiftEndMinutes: {
                             $add: [
-                                { $multiply: [{ $toInt: { $substr: ["$shiftDetails.endTime", 0, 2] } }, 60] },
-                                { $toInt: { $substr: ["$shiftDetails.endTime", 3, 2] } }
+                                {
+                                    $multiply: [
+                                        {
+                                            $convert: {
+                                                input: { $substr: ["$shiftDetails.endTime", 0, 2] },
+                                                to: "int",
+                                                onError: 0,
+                                                onNull: 0
+                                            }
+                                        },
+                                        60
+                                    ]
+                                },
+                                {
+                                    $convert: {
+                                        input: { $substr: ["$shiftDetails.endTime", 3, 2] },
+                                        to: "int",
+                                        onError: 0,
+                                        onNull: 0
+                                    }
+                                }
                             ]
                         }
                     }
@@ -288,7 +334,7 @@ module.exports = {
                 {
                     $group: {
                         _id: "$_id",
-                        date: { $first: "$date" }, 
+                        date: { $first: "$date" },
                         shift: {
                             $first: {
                                 employeeName: "$shifts.employeeName",
@@ -303,23 +349,15 @@ module.exports = {
                 },
                 {
                     $project: {
-                        date: 1, 
+                        date: 1,
                         shift: 1
                     }
                 }
             ]);
-            
-            // const todayStart = new Date();
-            // todayStart.setUTCHours(0, 0, 0, 0);
-            // const tomorrowStart = new Date(todayStart);
-            // tomorrowStart.setDate(todayStart.getDate() + 1);
-            // const productionTasks = await ProductionTask.find({
-            //     deviceId: machineId,
-            //     date: {
-            //         $gte: todayStart,
-            //         $lt: tomorrowStart
-            //     }
-            // });
+
+            // Sắp xếp mảng `productionTasks` theo `date` tăng dần
+            productionTasks.sort((a, b) => new Date(a.date) - new Date(b.date));
+
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
                 data: productionTasks
@@ -331,5 +369,72 @@ module.exports = {
             };
         }
     },
-
+    async getTopTen(params) {
+        try {
+            console.log(params)
+            const { startTime, endTime, type } = params;
+            let top10Records;
+            if (type == 1) {
+                top10Records = await AvailabilityDay.aggregate([
+                    {
+                        $match: {
+                            logTime: {
+                                $gte: startTime,
+                                $lte: endTime
+                            }
+                        }
+                    },
+                    {
+                        $sort: { runTime: -1 }
+                    },
+                    {
+                        $limit: 10
+                    }
+                ]).exec();
+            } else if (type == 2) {
+                top10Records = await AvailabilityDay.aggregate([
+                    {
+                        $match: {
+                            logTime: {
+                                $gte: startTime,
+                                $lte: endTime
+                            }
+                        }
+                    },
+                    {
+                        $sort: { idleTime: -1 }
+                    },
+                    {
+                        $limit: 10
+                    }
+                ]).exec();
+            } else {
+                top10Records = await AvailabilityDay.aggregate([
+                    {
+                        $match: {
+                            logTime: {
+                                $gte: startTime,
+                                $lte: endTime
+                            }
+                        }
+                    },
+                    {
+                        $sort: { stopTime: -1 }
+                    },
+                    {
+                        $limit: 10
+                    }
+                ]).exec();
+            }
+            return {
+                status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
+                data: top10Records
+            };
+        } catch (error) {
+            return {
+                status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
+                data: error
+            };
+        }
+    }
 }
