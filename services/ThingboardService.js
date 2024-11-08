@@ -17,6 +17,7 @@ const loginFunct = async (config) => {
     });
     const accessToken = response.data.token;
     logger.info(`Login Thingsboard success, accessToken = ${accessToken}`);
+    instance.defaults.headers["X-Authorization"] = `Bearer ${accessToken}`;
     if (config) {
       // the request from interceptors, they need to update the config
       config.headers["X-Authorization"] = `Bearer ${accessToken}`;
