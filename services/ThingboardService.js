@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require("axios");
 const logger = require('../config/logger');
 const { MAX_RECORD_FETCHED } = require('../constants/thingsboard');
 const serviceName = 'ThingsboardService';
@@ -17,41 +17,44 @@ const loginFunct = async (config) => {
     });
     const accessToken = response.data.token;
     logger.info(`Login Thingsboard success, accessToken = ${accessToken}`);
-    instance.defaults.headers["Authorization"] = `Bearer ${accessToken}`;
     if (config) {
       // the request from interceptors, they need to update the config
-      config.headers["Authorization"] = `Bearer ${accessToken}`;
+      config.headers["X-Authorization"] = `Bearer ${accessToken}`;
       return config;
     }
+    return accessToken;
   } catch (error) {
     throw error;
   }
 };
 
 instance.interceptors.request.use(async (config) => {
-  if (!config.headers["Authorization"] && !config.url?.includes('/api/auth/login')) {
+  if (!config.headers["X-Authorization"] && !config.url?.includes('/api/auth/login')) {
     let newConfig = await loginFunct(config);
     return newConfig;
-  } else {
-    return config;
   }
+  return config;
 }, (error) => {
   logger.error(`${serviceName}::interceptors.request - ${error.message}`);
   return Promise.reject(error);
 });
 
-instance.interceptors.response.use((response) => response, (error) => {
-  if (error.response && error.response.data) {
-    let { status } = error.response.data;
-    if (status === 401) {
-      // refeshing token.
-      let newConfig = loginFunct(error.config);
-      return instance.request(newConfig);
+instance.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      const loginUrl = '/api/auth/login';
+      const isLoginRequest = error.config.url.includes(loginUrl);
+      if (!isLoginRequest) {
+        let newConfig = await loginFunct(error.config);
+        return instance.request(newConfig);
+      }
     }
+    return Promise.reject(error);
   }
-  return Promise.reject(error);
-});
-
+);
 module.exports = {
   async getTelemetryDataByDeviceId(deviceId, startTs, endTs, keys) {
 
@@ -80,7 +83,7 @@ module.exports = {
     console.log(params)
     try {
       const buildUrl = `${THINGBOARD_API_URL}/api/rpc/oneway/${params.deviceId}`;
-      const response = await instance.post(buildUrl , {
+      const response = await instance.post(buildUrl, {
         method: params.controlKey,
         params: params.value,
         timeout: 500
