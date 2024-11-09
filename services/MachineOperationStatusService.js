@@ -168,10 +168,7 @@ module.exports = {
     async getPercentDiff(params) {
 
         try {
-            const { machineId } = params;
-            // const { startTime, endTime, machineId } = params;
-            const startTime = moment().subtract(1, 'days').startOf('day').format('YYYY-MM-DDTHH:mm:ss.SSS');
-            const endTime = moment().format('YYYY-MM-DDTHH:mm:ss.SSS');
+            const { startTime, endTime, machineId } = params;
             const getSummaryStatus = await AvailabilityHour.find({
                 machineId: machineId,
                 logTime: {
@@ -179,7 +176,6 @@ module.exports = {
                     $lte: endTime
                 }
             });
-
             const groupedData = getSummaryStatus.reduce((acc, item) => {
                 if (!acc[item.machineId]) acc[item.machineId] = [];
                 acc[item.machineId].push({
@@ -189,8 +185,7 @@ module.exports = {
                 });
                 return acc;
             }, {});
-
-            const resultsDiff = Object.values(groupedData).map(dataArray => {
+            const resultsPercent = Object.values(groupedData).map(dataArray => {
                 const dailySums = dataArray.reduce((acc, item) => {
                     const dateKey = new Date(item.logTime).toISOString().split('T')[0];
                     const itemLogTime = new Date(item.logTime);
@@ -199,7 +194,6 @@ module.exports = {
                     const itemMinute = itemLogTime.getMinutes();
                     const currentHour = currentTime.getHours();
                     const currentMinute = currentTime.getMinutes();
-
                     if (itemHour < currentHour || (itemHour === currentHour && itemMinute < currentMinute)) {
                         if (!acc[dateKey]) {
                             acc[dateKey] = { logTime: dateKey, machineId: item.machineId, runTime: 0 };
@@ -208,32 +202,33 @@ module.exports = {
                     }
                     return acc;
                 }, {});
-
                 const sortedData = Object.values(dailySums).sort((a, b) => new Date(a.logTime) - new Date(b.logTime));
-
                 return sortedData.slice(1).map((current, index) => {
                     const previous = sortedData[index];
-                    const difference = current.runTime - previous.runTime;
+                    const percentageChange = previous.runTime === 0
+                        ? current.runTime + '%'
+                        : ((current.runTime - previous.runTime) / previous.runTime) * 100;
 
                     return {
                         logTime: current.logTime,
                         machineId: current.machineId,
-                        runTimeDifference: difference/60
+                        percentageChange: isFinite(percentageChange) ? percentageChange.toFixed(2) + '%' : '0%'
                     };
                 });
             });
 
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
-                data: resultsDiff
+                data: resultsPercent
             };
         } catch (error) {
             return {
                 status: constants.INTERNAL_ERROR,
                 error: error
-            };
+            }
         }
     },
+    
 
     async getProductionTask(params, type) {
         const { startTime, endTime, machineId } = params;
