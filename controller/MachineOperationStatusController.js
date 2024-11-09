@@ -238,59 +238,20 @@ module.exports = {
             console.error("Error in getTopTenRunTime:", error);
             return HttpResponseService.internalServerError(res, error);
         }
-    }
-    // async callRpc(req, res) {
-    //     const { deviceId, controlKey, value, index, dates } = req.body;
-    //     const params = { deviceId, controlKey, value };
-    //     console.log(dates);
-    //     try {
-    //         if (index == 0) {
-    //             const callRpcResult = await ThingboardService.callRpc(params);
-    //             return HttpResponseService.success(res, constants.SUCCESS, callRpcResult);
-    //         } else {
-    //             const [year, month, day] = dates.split('-');
-    //             const cronExpression = `0 0 ${day} ${month} *`; 
-    //             const task = cron.schedule(cronExpression, async () => {
-    //                 try {
-    //                     const callRpcResult = await ThingboardService.callRpc(params);
-    //                     if (!res.headersSent) {
-    //                         HttpResponseService.success(res, constants.SUCCESS, callRpcResult);
-    //                     }
-    //                     setTimeout(async () => {
-    //                         try {
-    //                             const secondCallResult = await ThingboardService.callRpc(params);
-    //                             if (!res.headersSent) {
-    //                                 HttpResponseService.success(res, constants.SUCCESS, secondCallResult);
-    //                             }
-    //                         } catch (error) {
-    //                             if (!res.headersSent) {
-    //                                 HttpResponseService.internalServerError(res, error);
-    //                             }
-    //                         } finally {
-    //                             task.stop();
-    //                         }
-    //                     }, 60000);
-    //                 } catch (error) {
-    //                     if (!res.headersSent) {
-    //                         HttpResponseService.internalServerError(res, error);
-    //                     }
-    //                     task.stop();
-    //                 }
-    //             });
-    //             cronTasks.set(controlKey, task);
-
-    //             if (!res.headersSent) {
-    //                 return HttpResponseService.success(res, constants.SUCCESS, {
-    //                     message: `RPC call has been scheduled for ${dates}.`
-    //                 });
-    //             }
-    //         }
-    //     } catch (error) {
-    //         if (!res.headersSent) {
-    //             return HttpResponseService.internalServerError(res, error);
-    //         }
-    //     }
-    // },
+    },
+    async callRpc(req, res) {
+        const { deviceId, controlKey, value, index, dates } = req.body;
+        const params = { deviceId, controlKey, value };
+        console.log(dates);
+        try {
+            const callRpcResult = await ThingboardService.callRpc(params);
+            return HttpResponseService.success(res, constants.SUCCESS, callRpcResult);
+        } catch (error) {
+            if (!res.headersSent) {
+                return HttpResponseService.internalServerError(res, error);
+            }
+        }
+    },
     // async cancelScheduledTask(req, res) {
     //     const machineId = req.body.machineId
     //     const task = cronTasks.get(machineId);

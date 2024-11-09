@@ -3,6 +3,7 @@ const connectDB = require('./config/db');
 const cors = require('cors');
 const os = require('os');
 const https = require('https');
+const http = require('http'); 
 const fs = require('fs');
 const moment = require('moment');
 const dotenv = require('dotenv');
@@ -17,6 +18,7 @@ const productionTasktRoutes = require('./routes/ProductionTaskRouter');
 const downtimeRoute = require('./routes/DowntimeRoute');
 const machineOperationsRoute = require('./routes/MachineOperationStatusRoute');
 const cron = require('node-cron');
+const { initSocket } = require('./services/SocketHandlerService');
 
 const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
@@ -49,6 +51,13 @@ const getIPAddress = () => {
   }
   return '0.0.0.0';
 };
+const server = http.createServer(app);
+
+initSocket(server);
+
+app.get('/', (req, res) => {
+  res.send('Server is up and running');
+});
 app.use(express.json());
 connectDB();
 const fetchProductionTasksForToday = async () => {
@@ -126,7 +135,7 @@ const fetchProductionTasksForToday = async () => {
   }
 };
 
-cron.schedule('*/5 * * * *', fetchProductionTasksForToday);
+cron.schedule('0 * * * *', fetchProductionTasksForToday);
 fetchProductionTasksForToday();
 // const fetchAndSaveTelemetryDataType = async (type) => {
 //   try {
@@ -194,7 +203,7 @@ app.use('/api/workShifts', workShiftRoutes);
 app.use('/api/productiontask', productionTasktRoutes); 
 app.use('/api/downtime',downtimeRoute);
 app.use('/api/machine-operations', machineOperationsRoute);
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
   const ipAddress = getIPAddress();
   console.log(`Server is running on http://${ipAddress}:${PORT}`);
 });

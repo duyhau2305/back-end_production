@@ -12,5 +12,9 @@ module.exports = {
     RESOURCE_SUCCESSFULLY_DELETED: "The resource has been successfully deleted.",
     RESOURCES_SUCCESSFULLY_DELETED: "The resources have been successfully deleted.",
     RESOURCES_NOT_SUCCESSFULLY_DELETED: "The resources haven't been successfully deleted.",
-    INTERNAL_ERROR: "Internal error"
+    INTERNAL_ERROR: "Internal error",
+    CONNECTION_ESTABLISHED: 'Connection established',
+    CONNECTION_CLOSED: 'Connection closed',
+    CALL_HELP_TRIGGERED: 'Call for help triggered',
+    CANCEL_CALL_TRIGGERED: 'Cancel call triggered',
 }
