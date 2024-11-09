@@ -126,7 +126,7 @@ const fetchProductionTasksForToday = async () => {
   }
 };
 
-cron.schedule('*/5 * * * *', fetchProductionTasksForToday);
+cron.schedule('0 * * * *', fetchProductionTasksForToday);
 fetchProductionTasksForToday();
 // const fetchAndSaveTelemetryDataType = async (type) => {
 //   try {

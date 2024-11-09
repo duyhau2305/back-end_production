@@ -7,7 +7,7 @@ router.get('/machineOperations', MachineOperationStatusController.getMachine);
 // router.get('/percentDiff', MachineOperationStatusController.getPercentDiff);
 router.get('/machine-information', MachineOperationStatusController.getInformationAllMachine);
 router.get('/machine-analysis', MachineOperationStatusController.getInformationAnalysis);
-// router.post('/call-rpc', MachineOperationStatusController.callRpc);
+router.post('/call-rpc', MachineOperationStatusController.callRpc);
 // router.post('/cancel-rpc', MachineOperationStatusController.cancelScheduledTask);
 router.get('/top-ten', MachineOperationStatusController.getTopTenRunTime);
 
