@@ -155,7 +155,7 @@ module.exports = {
                     return {
                         ...machine,
                         currentStatus: currentStatus.data,
-                        productionTasks: productionTasks.data,
+                        productionTasks: productionTasks,
                         percentDiff: percentDiff.data?.[0]?.[0]?.runTimeDifference,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,

@@ -218,7 +218,7 @@ module.exports = {
                     return {
                         logTime: current.logTime,
                         machineId: current.machineId,
-                        runTimeDifference: difference/60
+                        runTimeDifference: difference / 60
                     };
                 });
             });
@@ -240,10 +240,12 @@ module.exports = {
         try {
             let todayStart;
             let todayEnd;
+            let today = new Date();
+
             if (type === 'machine') {
-                todayStart = new Date();
+                todayStart = new Date(today);
                 todayStart.setUTCHours(0, 0, 0, 0);
-                todayEnd = new Date();
+                todayEnd = new Date(today);
                 todayEnd.setUTCHours(23, 59, 59, 999);
             } else {
                 todayStart = new Date(startTime);
@@ -251,7 +253,6 @@ module.exports = {
                 todayEnd = new Date(endTime);
                 todayEnd.setUTCHours(23, 59, 59, 999);
             }
-
             const productionTasks = await ProductionTask.aggregate([
                 {
                     $match: {
@@ -259,7 +260,7 @@ module.exports = {
                         date: {
                             $gte: todayStart,
                             $lte: todayEnd
-                        }
+                          }
                     }
                 },
                 { $unwind: "$shifts" },
@@ -354,8 +355,7 @@ module.exports = {
                     }
                 }
             ]);
-
-            // Sắp xếp mảng `productionTasks` theo `date` tăng dần
+            console.log(productionTasks)
             productionTasks.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             return {
