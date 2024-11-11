@@ -121,7 +121,7 @@ module.exports = {
 
     async getInformationAllMachine(req, res) {
         try {
-            const startTime = moment().subtract(1, 'days').startOf('day').toISOString();
+            const startTime = moment().subtract(1,'days').startOf('day').toISOString();
             const endTime = moment().toISOString();
             const allMachine = await MachineOperationStatusService.getAllMachine();
             if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
@@ -150,7 +150,8 @@ module.exports = {
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
                     const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
-
+                    const currentHour = parseInt(moment().tz("Asia/Ho_Chi_Minh").format("HH"), 10);
+                    const machinePercent =(summaryStatus.data?.[0]?.runTime / 60 )/ (currentHour*60) *100
                     const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
                     return {
                         ...machine,
@@ -162,6 +163,7 @@ module.exports = {
                         summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
                         timelineEndTime: lastInterval?.endTime,
                         timelineStartTime: lastInterval?.startTime,
+                        machinePercent : machinePercent
                     };
                 })
             );

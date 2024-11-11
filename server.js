@@ -19,7 +19,8 @@ const downtimeRoute = require('./routes/DowntimeRoute');
 const machineOperationsRoute = require('./routes/MachineOperationStatusRoute');
 const cron = require('node-cron');
 const { initSocket } = require('./services/SocketHandlerService');
-
+const bodyParser = require('body-parser');
+const axios = require('axios');
 const startDate = moment().format('YYYY-MM-DD');
 const endDate = moment().format('YYYY-MM-DD');
 const dailyStatusRoutes = require('./routes/DailyStatusRoutes');
@@ -39,7 +40,25 @@ const app = express();
 const PORT = process.env.PORT || 3000; 
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
 
+//tele-gram
+const TELEGRAM_TOKEN = '7735818722:AAE90rz3rbzmi8oJ34NS-pJWn_FkXL2-aDc'; 
+const TELEGRAM_CHAT_ID = '-1002370841315'; 
+app.post('/send-telegram', async (req, res) => {
+  const { message } = req.body;
+
+  try {
+      await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+      });
+      res.status(200).json({ success: true, message: 'Message sent to Telegram group' });
+  } catch (error) {
+      console.error('Error sending message:', error);
+      res.status(500).json({ success: false, error: error.message });
+  }
+});
 const getIPAddress = () => {
   const interfaces = os.networkInterfaces();
   for (let iface in interfaces) {
@@ -51,13 +70,14 @@ const getIPAddress = () => {
   }
   return '0.0.0.0';
 };
+//socket
 const server = http.createServer(app);
-
 initSocket(server);
 
 app.get('/', (req, res) => {
   res.send('Server is up and running');
 });
+
 app.use(express.json());
 connectDB();
 const fetchProductionTasksForToday = async () => {
