@@ -10,8 +10,8 @@ function initSocket(server) {
       origin: "*",
       methods: ["GET", "POST"],
     },
-    pingInterval: 25000,
-    pingTimeout: 20000,
+    pingInterval: 15000,
+    pingTimeout: 10000,
   });
 
   io.on('connection', (socket) => {
