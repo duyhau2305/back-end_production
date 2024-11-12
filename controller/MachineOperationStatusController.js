@@ -136,34 +136,39 @@ module.exports = {
                 endTime: endTime,
                 ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
-
+            const startPercent = moment().subtract(1,'days').startOf('day').toISOString();
+            
             const result = await Promise.all(
                 allMachine.data.map(async (machine) => {
                     const paramsProductionTask = createParams(machine.deviceId);
                     const paramsSummary = createParams(machine._id, true);
                     const timelineParams = createParams(machine._id);
-
+                    const paramsPercentDiff = {
+                        machineId : machine._id,
+                        startTime: startPercent,
+                        endTime: endTime,
+                    }
                     const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
                         MachineOperationStatusService.getCurrentStatus(machine._id),
                         MachineOperationStatusService.getProductionTask(paramsProductionTask, 'machine'),
-                        MachineOperationStatusService.getPercentDiff(paramsSummary),
+                        MachineOperationStatusService.getPercentDiff(paramsPercentDiff),
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
                     let totalBreakTimeInMinutes = 0;
                     let timeRange = null;
 
-                    if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.breakTime) {
-                        totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].breakTime.reduce((total, breakPeriod) => {
+                    if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.shiftDetails.breakTime) {
+                        totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].shiftDetails.breakTime.reduce((total, breakPeriod) => {
                             const breakStart = moment(breakPeriod.startTime, "HH:mm");
                             const breakEnd = moment(breakPeriod.endTime, "HH:mm");
                             return total + breakEnd.diff(breakStart, "minutes");
                         }, 0);
                     }
                     if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 1  ) {
-                        const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
+const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
                         console.log(lastShift)
 
-                        const lastBreakEndTime = lastShift.endTime;
+                        const lastBreakEndTime = lastShift.shiftDetails.endTime;
                     
                         if (lastBreakEndTime) {
                             timeRange = `8h-${lastBreakEndTime}`;
@@ -181,7 +186,7 @@ module.exports = {
                         ...machine,
                         currentStatus: currentStatus.data,
                         productionTasks: productionTasks.data,
-                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange,
+                        percentDiff: percentDiff.data?.[0]?.[1]?.percentageChange,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
                         summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
@@ -256,8 +261,8 @@ module.exports = {
     async getTopTenRunTime(req, res) {
         try {
 
-            const { startTime, endTime, type, machineSerial } = req.query;
-            const params = { startTime, endTime, type, machineSerial };
+            const { startTime, endTime,type, machineSerial } = req.query;
+            const params = { startTime, endTime, type , machineSerial};
             const getTopTen = await MachineOperationStatusService.getTopTen(params)
             return HttpResponseService.success(res, constants.SUCCESS, getTopTen);
 
