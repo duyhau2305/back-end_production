@@ -5,7 +5,6 @@ const productionTaskService = require('../services/ProductionTaskService');
 
 async function createProductionTask(req, res) {
   const { shifts, deviceName } = req.body;
-  console.log(req.body);
 
   try {
     
