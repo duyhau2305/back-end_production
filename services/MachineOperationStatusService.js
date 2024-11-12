@@ -255,7 +255,7 @@ module.exports = {
                         date: {
                             $gte: todayStart,
                             $lte: todayEnd
-                          }
+                        }
                     }
                 },
                 { $unwind: "$shifts" },
@@ -366,64 +366,28 @@ module.exports = {
     },
     async getTopTen(params) {
         try {
-            console.log(params)
-            const { startTime, endTime, type } = params;
-            let top10Records;
-            if (type == 1) {
-                top10Records = await AvailabilityDay.aggregate([
-                    {
-                        $match: {
-                            logTime: {
-                                $gte: startTime,
-                                $lte: endTime
-                            }
-                        }
-                    },
-                    {
-                        $sort: { runTime: -1 }
-                    },
-                    {
-                        $limit: 10
+            console.log(params);
+            const { startTime, endTime, type ,  machineSerial} = params;
+    
+            const result = await YourModel.aggregate([
+                {
+                    $match: {
+                        logTime: { $gte: startTime, $lte: endTime }  // Lọc theo logTime trong khoảng thời gian
                     }
-                ]).exec();
-            } else if (type == 2) {
-                top10Records = await AvailabilityDay.aggregate([
-                    {
-                        $match: {
-                            logTime: {
-                                $gte: startTime,
-                                $lte: endTime
-                            }
-                        }
-                    },
-                    {
-                        $sort: { idleTime: -1 }
-                    },
-                    {
-                        $limit: 10
+                },
+                {
+                    $group: { 
+                        _id: "$machineId",  // Nhóm theo machineId
+                        totalRunTime: { $sum: "$runTime" },   // Tính tổng runTime
+                        totalStopTime: { $sum: "$stopTime" }, // Tính tổng stopTime
+                        totalIdleTime: { $sum: "$idleTime" }  // Tính tổng idleTime
                     }
-                ]).exec();
-            } else {
-                top10Records = await AvailabilityDay.aggregate([
-                    {
-                        $match: {
-                            logTime: {
-                                $gte: startTime,
-                                $lte: endTime
-                            }
-                        }
-                    },
-                    {
-                        $sort: { stopTime: -1 }
-                    },
-                    {
-                        $limit: 10
-                    }
-                ]).exec();
-            }
+                }
+            ]);
+    
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
-                data: top10Records
+                data: result
             };
         } catch (error) {
             return {
@@ -432,4 +396,6 @@ module.exports = {
             };
         }
     }
+    
+    
 }

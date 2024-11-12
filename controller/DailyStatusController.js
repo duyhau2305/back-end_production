@@ -213,12 +213,8 @@ const updateTask = async (req, res) => {
 }
 const getProcessDevice = async (req, res) => {
   const { deviceId, startDate, endDate } = req.query;
-
-  // Chuyển startDate và endDate từ chuỗi 'YYYY-MM-DD' sang định dạng UTC
   const start = new Date(`${startDate}T00:00:00.000Z`).toISOString();
   const end = new Date(`${endDate}T23:59:59.999Z`).toISOString();
- 
-
   try {
   
     const [availabilityData, productionTasks] = await Promise.all([
@@ -236,31 +232,31 @@ const getProcessDevice = async (req, res) => {
             deviceId: deviceId,
           }
         },
-        { $unwind: "$shifts" }, // Tách mảng shifts thành các phần tử riêng
-        { $unwind: "$shifts" }, // Tách mảng shifts thành các phần tử riêng
+        { $unwind: "$shifts" }, 
+        { $unwind: "$shifts" },
         {
           $lookup: {
-            from: "workshifts", // Tên của collection bạn muốn join
-            localField: "shifts.shiftName", // Trường trong ProductionTasks.shifts
-            foreignField: "shiftName", // Trường trong workshifts
-            as: "shiftDetails" // Tên trường lưu kết quả join
+            from: "workshifts",
+            localField: "shifts.shiftName",
+            foreignField: "shiftName",
+            as: "shiftDetails"
             
           }
         },
-        { $unwind: "$shiftDetails" }, // Tách mảng shiftDetails nếu cần thiết
-        { $unwind: "$shiftDetails" }, // Tách mảng shiftDetails nếu cần thiết
+        { $unwind: "$shiftDetails" }, 
+        { $unwind: "$shiftDetails" },
         {
           $group: {
             _id: "$_id",
-            shifts: { $push: { shift: "$shifts", shiftDetails: "$shiftDetails" } }, // Gom shifts thành mảng
-            otherFields: { $first: "$$ROOT" } // Giữ các trường khác từ document gốc
+            shifts: { $push: { shift: "$shifts", shiftDetails: "$shiftDetails" } }, 
+            otherFields: { $first: "$$ROOT" }
             
           }
         },
         {
           $replaceRoot: {
             newRoot: {
-              $mergeObjects: ["$otherFields", { shifts: "$shifts" }] // Thay thế root để giữ các trường khác và shifts đã join
+              $mergeObjects: ["$otherFields", { shifts: "$shifts" }] 
             }
           }
         }

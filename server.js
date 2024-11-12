@@ -106,13 +106,17 @@ const fetchProductionTasksForToday = async () => {
     };
 
     const tasks = await ProductionTask.find(query, 'deviceName shifts.status');
-
+    // const tasks = await ProductionTask.find();
+    // const statusMap = {
+    //   "Chạy": 0,
+    //   "Dừng": 0,
+    //   "Chờ": 0
+    // };
     const statusMap = {
       "Chạy": 1,
       "Dừng": 3,
       "Chờ": 2
     };
-
     const callRpcWithRetry = async (params, retries = 3) => {
       for (let attempt = 0; attempt < retries; attempt++) {
         try {

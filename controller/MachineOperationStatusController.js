@@ -149,9 +149,33 @@ module.exports = {
                         MachineOperationStatusService.getPercentDiff(paramsSummary),
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
+                    let totalBreakTimeInMinutes = 0;
+                    let timeRange = null;
+
+                    if (productionTasks.data && productionTasks.data.length > 0 && productionTasks.data[0].shifts[0]?.breakTime) {
+                        totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].breakTime.reduce((total, breakPeriod) => {
+                            const breakStart = moment(breakPeriod.startTime, "HH:mm");
+                            const breakEnd = moment(breakPeriod.endTime, "HH:mm");
+                            return total + breakEnd.diff(breakStart, "minutes");
+                        }, 0);
+                    }
+                    if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 1  ) {
+                        const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
+                        console.log(lastShift)
+
+                        const lastBreakEndTime = lastShift.endTime;
+                    
+                        if (lastBreakEndTime) {
+                            timeRange = `8h-${lastBreakEndTime}`;
+                        }
+                    }
+                    const currentMoment = moment().tz("Asia/Ho_Chi_Minh");
+                    const currentHour = currentMoment.hours();
+                    const currentMinute = currentMoment.minutes();
+                    const totalMinutesFrom8AM = (currentHour - 8) * 60 + currentMinute;
+                    const adjustedRunTime = totalMinutesFrom8AM - totalBreakTimeInMinutes;
+                    const machinePercent = ((summaryStatus.data?.[0]?.runTime || 0) / 60 / adjustedRunTime) * 100;
                     const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
-                    const currentHour = parseInt(moment().tz("Asia/Ho_Chi_Minh").format("HH"), 10);
-                    const machinePercent =(summaryStatus.data?.[0]?.runTime / 60 )/ (currentHour*60) *100
                     const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
                     return {
                         ...machine,
@@ -163,7 +187,8 @@ module.exports = {
                         summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
                         timelineEndTime: lastInterval?.endTime,
                         timelineStartTime: lastInterval?.startTime,
-                        machinePercent : machinePercent
+                        machinePercent: machinePercent,
+                        timeRange : timeRange
                     };
                 })
             );
@@ -230,10 +255,10 @@ module.exports = {
     },
     async getTopTenRunTime(req, res) {
         try {
-            
-            const { startTime, endTime , type } = req.query;
-            const params = { startTime, endTime , type };
-            const getTopTen =await MachineOperationStatusService.getTopTen(params)
+
+            const { startTime, endTime, type, machineSerial } = req.query;
+            const params = { startTime, endTime, type, machineSerial };
+            const getTopTen = await MachineOperationStatusService.getTopTen(params)
             return HttpResponseService.success(res, constants.SUCCESS, getTopTen);
 
         } catch (error) {
@@ -244,7 +269,6 @@ module.exports = {
     async callRpc(req, res) {
         const { deviceId, controlKey, value, index, dates } = req.body;
         const params = { deviceId, controlKey, value };
-        console.log(dates);
         try {
             const callRpcResult = await ThingboardService.callRpc(params);
             return HttpResponseService.success(res, constants.SUCCESS, callRpcResult);
