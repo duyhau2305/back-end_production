@@ -228,7 +228,7 @@ module.exports = {
             }
         }
     },
-    
+
 
     async getProductionTask(params, type) {
         const { startTime, endTime, machineId } = params;
@@ -258,7 +258,6 @@ module.exports = {
                         }
                     }
                 },
-                { $unwind: "$shifts" },
                 {
                     $lookup: {
                         from: "workshifts",
@@ -268,62 +267,29 @@ module.exports = {
                     }
                 },
                 {
-                    $unwind: {
-                        path: "$shiftDetails",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
                     $addFields: {
-                        shiftStartMinutes: {
-                            $add: [
-                                {
-                                    $multiply: [
+                        shifts: {
+                            $map: {
+                                input: "$shifts", // Duyệt qua từng phần tử trong mảng shifts
+                                as: "shift",
+                                in: {
+                                    $mergeObjects: [ // Gộp các trường trong shift và shiftDetails vào nhau
+                                        "$$shift", // Các trường từ mảng shifts
                                         {
-                                            $convert: {
-                                                input: { $substr: ["$shiftDetails.startTime", 0, 2] },
-                                                to: "int",
-                                                onError: 0,
-                                                onNull: 0
+                                            shiftDetails: {
+                                                $arrayElemAt: [
+                                                    { $filter: {
+                                                        input: "$shiftDetails", // Lọc các shiftDetails
+                                                        as: "detail",
+                                                        cond: { $eq: ["$$detail.shiftName", "$$shift.shiftName"] } // Kết nối shiftDetails với shiftName trong shifts
+                                                    }},
+                                                    0 // Lấy phần tử đầu tiên từ mảng filtered
+                                                ]
                                             }
-                                        },
-                                        60
+                                        }
                                     ]
-                                },
-                                {
-                                    $convert: {
-                                        input: { $substr: ["$shiftDetails.startTime", 3, 2] },
-                                        to: "int",
-                                        onError: 0,
-                                        onNull: 0
-                                    }
                                 }
-                            ]
-                        },
-                        shiftEndMinutes: {
-                            $add: [
-                                {
-                                    $multiply: [
-                                        {
-                                            $convert: {
-                                                input: { $substr: ["$shiftDetails.endTime", 0, 2] },
-                                                to: "int",
-                                                onError: 0,
-                                                onNull: 0
-                                            }
-                                        },
-                                        60
-                                    ]
-                                },
-                                {
-                                    $convert: {
-                                        input: { $substr: ["$shiftDetails.endTime", 3, 2] },
-                                        to: "int",
-                                        onError: 0,
-                                        onNull: 0
-                                    }
-                                }
-                            ]
+                            }
                         }
                     }
                 },
@@ -331,25 +297,19 @@ module.exports = {
                     $group: {
                         _id: "$_id",
                         date: { $first: "$date" },
-                        shift: {
-                            $first: {
-                                employeeName: "$shifts.employeeName",
-                                status: "$shifts.status",
-                                startTime: "$shiftDetails.startTime",
-                                endTime: "$shiftDetails.endTime",
-                                breakTime: "$shiftDetails.breakTime"
-                            }
-                        },
+                        shifts: { $first: "$shifts" },
                         __v: { $first: "$__v" }
                     }
                 },
                 {
                     $project: {
                         date: 1,
-                        shift: 1
+                        shifts: 1, // Trả về mảng shifts đã được kết hợp với shiftDetails
+                        __v: 1
                     }
                 }
             ]);
+            
             console.log(productionTasks)
             productionTasks.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -367,23 +327,89 @@ module.exports = {
     async getTopTen(params) {
         try {
             console.log(params);
-            const { startTime, endTime, type ,  machineSerial} = params;
+            const { startTime, endTime, machineSerial, type } = params;
     
-            const result = await YourModel.aggregate([
-                {
-                    $match: {
-                        logTime: { $gte: startTime, $lte: endTime }  // Lọc theo logTime trong khoảng thời gian
+            let result    
+                if (type == 1) {
+                 result = await AvailabilityDay.aggregate([
+                    {
+                        $match: {
+                            logTime: { $gte: startTime, $lte: endTime },
+                            machineSerialNum: { $regex: `^${machineSerial}`, $options: "i" }  // Match machineSerialNum that starts with "P"
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$machineId",
+                            totalRunTime: { $sum: "$runTime" },
+                            totalStopTime: { $sum: "$stopTime" },
+                            totalIdleTime: { $sum: "$idleTime" },
+                            machineSerialNum: { $first: "$machineSerialNum" },
+                        }
+                    },
+                    {
+                        $sort: {
+                            totalRunTime: -1  // Sort dynamically based on the type
+                        }
+                    },
+                    {
+                        $limit: 10  // Limit to top 10 records
                     }
-                },
-                {
-                    $group: { 
-                        _id: "$machineId",  // Nhóm theo machineId
-                        totalRunTime: { $sum: "$runTime" },   // Tính tổng runTime
-                        totalStopTime: { $sum: "$stopTime" }, // Tính tổng stopTime
-                        totalIdleTime: { $sum: "$idleTime" }  // Tính tổng idleTime
+                ]);
+            } else if (type == 2) {
+                 result = await AvailabilityDay.aggregate([
+                    {
+                        $match: {
+                            logTime: { $gte: startTime, $lte: endTime },
+                            machineSerialNum: { $regex: `^${machineSerial}`, $options: "i" }  // Match machineSerialNum that starts with "P"
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$machineId",
+                            totalRunTime: { $sum: "$runTime" },
+                            totalStopTime: { $sum: "$stopTime" },
+                            totalIdleTime: { $sum: "$idleTime" },
+                            machineSerialNum: { $first: "$machineSerialNum" },
+                        }
+                    },
+                    {
+                        $sort: {
+                            totalIdleTime: -1  // Sort dynamically based on the type
+                        }
+                    },
+                    {
+                        $limit: 10  // Limit to top 10 records
                     }
-                }
-            ]);
+                ]);
+            } else if (type == 3) {
+                 result = await AvailabilityDay.aggregate([
+                    {
+                        $match: {
+                            logTime: { $gte: startTime, $lte: endTime },
+                            machineSerialNum: { $regex: `^${machineSerial}`, $options: "i" }  // Match machineSerialNum that starts with "P"
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$machineId",
+                            totalRunTime: { $sum: "$runTime" },
+                            totalStopTime: { $sum: "$stopTime" },
+                            totalIdleTime: { $sum: "$idleTime" },
+                            machineSerialNum: { $first: "$machineSerialNum" },
+                        }
+                    },
+                    {
+                        $sort: {
+                            totalStopTime: -1  // Sort dynamically based on the type
+                        }
+                    },
+                    {
+                        $limit: 10  // Limit to top 10 records
+                    }
+                ]);
+            }
+            
     
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
@@ -391,11 +417,12 @@ module.exports = {
             };
         } catch (error) {
             return {
-                status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
+                status: constants.RESOURCE_FETCH_ERROR,
                 data: error
             };
         }
     }
     
-    
+
+
 }

@@ -121,7 +121,7 @@ module.exports = {
 
     async getInformationAllMachine(req, res) {
         try {
-            const startTime = moment().subtract(1,'days').startOf('day').toISOString();
+            const startTime = moment().subtract('days').startOf('day').toISOString();
             const endTime = moment().toISOString();
             const allMachine = await MachineOperationStatusService.getAllMachine();
             if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
@@ -152,8 +152,8 @@ module.exports = {
                     let totalBreakTimeInMinutes = 0;
                     let timeRange = null;
 
-                    if (productionTasks.data && productionTasks.data.length > 0 && productionTasks.data[0].shifts[0]?.breakTime) {
-                        totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].breakTime.reduce((total, breakPeriod) => {
+                    if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.shiftDetails.breakTime) {
+                        totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].shiftDetails.breakTime.reduce((total, breakPeriod) => {
                             const breakStart = moment(breakPeriod.startTime, "HH:mm");
                             const breakEnd = moment(breakPeriod.endTime, "HH:mm");
                             return total + breakEnd.diff(breakStart, "minutes");
@@ -163,7 +163,7 @@ module.exports = {
                         const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
                         console.log(lastShift)
 
-                        const lastBreakEndTime = lastShift.endTime;
+                        const lastBreakEndTime = lastShift.shiftDetails.endTime;
                     
                         if (lastBreakEndTime) {
                             timeRange = `8h-${lastBreakEndTime}`;
@@ -256,8 +256,8 @@ module.exports = {
     async getTopTenRunTime(req, res) {
         try {
 
-            const { startTime, endTime, type, machineSerial } = req.query;
-            const params = { startTime, endTime, type, machineSerial };
+            const { startTime, endTime,type, machineSerial } = req.query;
+            const params = { startTime, endTime, type , machineSerial};
             const getTopTen = await MachineOperationStatusService.getTopTen(params)
             return HttpResponseService.success(res, constants.SUCCESS, getTopTen);
 
