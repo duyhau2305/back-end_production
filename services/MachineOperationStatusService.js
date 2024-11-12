@@ -225,9 +225,10 @@ module.exports = {
             return {
                 status: constants.INTERNAL_ERROR,
                 error: error
-            };
+            }
         }
     },
+    
 
     async getProductionTask(params, type) {
         const { startTime, endTime, machineId } = params;

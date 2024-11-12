@@ -121,7 +121,7 @@ module.exports = {
 
     async getInformationAllMachine(req, res) {
         try {
-            const startTime = moment().subtract('days').startOf('day').toISOString();
+            const startTime = moment().subtract(1,'days').startOf('day').toISOString();
             const endTime = moment().toISOString();
             const allMachine = await MachineOperationStatusService.getAllMachine();
             if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
