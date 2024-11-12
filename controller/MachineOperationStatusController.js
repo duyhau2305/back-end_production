@@ -121,7 +121,7 @@ module.exports = {
 
     async getInformationAllMachine(req, res) {
         try {
-            const startTime = moment().subtract(1,'days').startOf('day').toISOString();
+            const startTime = moment().subtract('days').startOf('day').toISOString();
             const endTime = moment().toISOString();
             const allMachine = await MachineOperationStatusService.getAllMachine();
             if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
@@ -152,7 +152,7 @@ module.exports = {
                     let totalBreakTimeInMinutes = 0;
                     let timeRange = null;
 
-                    if (productionTasks.data && productionTasks.data.length > 0 && productionTasks.data[0].shifts[0]?.breakTime) {
+                    if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.breakTime) {
                         totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].breakTime.reduce((total, breakPeriod) => {
                             const breakStart = moment(breakPeriod.startTime, "HH:mm");
                             const breakEnd = moment(breakPeriod.endTime, "HH:mm");
