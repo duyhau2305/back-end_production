@@ -154,18 +154,28 @@ module.exports = {
                         MachineOperationStatusService.getPercentDiff(paramsPercentDiff),
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
-                    let totalBreakTimeInMinutes = 0;
+                    let totalBreakTimeInMinutes = 0; 
                     let timeRange = null;
 
                     if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.shiftDetails.breakTime) {
-                        totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].shiftDetails.breakTime.reduce((total, breakPeriod) => {
+                        productionTasks.data[0].shifts[0].shiftDetails.breakTime.forEach((breakPeriod) => {
                             const breakStart = moment(breakPeriod.startTime, "HH:mm");
                             const breakEnd = moment(breakPeriod.endTime, "HH:mm");
-                            return total + breakEnd.diff(breakStart, "minutes");
-                        }, 0);
+                            const currentTime = moment(); // Thời gian hiện tại
+                    
+                            // Nếu thời gian hiện tại đã qua thời gian kết thúc của khoảng nghỉ này, cộng khoảng thời gian đó vào tổng
+                            if (currentTime.isAfter(breakEnd)) {
+                                totalBreakTimeInMinutes += breakEnd.diff(breakStart, "minutes");
+                            }
+                            // Nếu hiện tại nằm trong khoảng thời gian nghỉ, chỉ tính thời gian đã trôi qua từ đầu khoảng nghỉ
+                            else if (currentTime.isBetween(breakStart, breakEnd)) {
+                                totalBreakTimeInMinutes += currentTime.diff(breakStart, "minutes");
+                            }
+                        });
                     }
-                    if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 1  ) {
-const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
+                    
+                    if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 0  ) {
+                    const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
                         console.log(lastShift)
 
                         const lastBreakEndTime = lastShift.shiftDetails.endTime;
@@ -179,13 +189,19 @@ const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.
                     const currentMinute = currentMoment.minutes();
                     const totalMinutesFrom8AM = (currentHour - 8) * 60 + currentMinute;
                     const adjustedRunTime = totalMinutesFrom8AM - totalBreakTimeInMinutes;
-                    const machinePercent = ((summaryStatus.data?.[0]?.runTime || 0) / 60 / adjustedRunTime) * 100;
+                    const machinePercent = (((summaryStatus.data?.[0]?.runTime || 0) / 60 )/ adjustedRunTime) * 100;
                     const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
                     const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
                     return {
                         ...machine,
                         currentStatus: currentStatus.data,
+                        currentHour: currentHour,
+                        currentMinute:currentMinute,
+                        totalBreakTimeInMinutes:totalBreakTimeInMinutes,
+                        currentMoment: currentMoment,
+                        totalMinutesFrom8AM:totalMinutesFrom8AM,
                         productionTasks: productionTasks.data,
+                        adjustedRunTime:adjustedRunTime,
                         percentDiff: percentDiff.data?.[0]?.[1]?.percentageChange,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
