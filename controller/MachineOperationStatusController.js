@@ -119,6 +119,101 @@ module.exports = {
     //     }
     // },
 
+    // async getInformationAllMachine(req, res) {
+    //     try {
+    //         const startTime = moment().subtract('days').startOf('day').toISOString();
+    //         const endTime = moment().toISOString();
+    //         const allMachine = await MachineOperationStatusService.getAllMachine();
+    //         if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
+    //             return HttpResponseService.notFound(res, "No machines found.");
+    //         }
+    //         if (allMachine.status !== constants.RESOURCE_SUCCESSFULLY_FETCHED) {
+    //             return HttpResponseService.internalServerError(res, allMachine);
+    //         }
+    //         const createParams = (machineId, isSummary = false) => ({
+    //             machineId,
+    //             startTime: startTime,
+    //             endTime: endTime,
+    //             ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
+    //         });
+    //         const startPercent = moment().subtract(1,'days').startOf('day').toISOString();
+
+    //         const result = await Promise.all(
+    //             allMachine.data.map(async (machine) => {
+    //                 const paramsProductionTask = createParams(machine.deviceId);
+    //                 const paramsSummary = createParams(machine._id, true);
+    //                 const timelineParams = createParams(machine._id);
+    //                 const paramsPercentDiff = {
+    //                     machineId : machine._id,
+    //                     startTime: startPercent,
+    //                     endTime: endTime,
+    //                 }
+    //                 const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
+    //                     MachineOperationStatusService.getCurrentStatus(machine._id),
+    //                     MachineOperationStatusService.getProductionTask(paramsProductionTask, 'machine'),
+    //                     MachineOperationStatusService.getPercentDiff(paramsPercentDiff),
+    //                     MachineOperationStatusService.getSummaryStatus(paramsSummary),
+    //                 ]);
+    //                 let totalBreakTimeInMinutes = 0; 
+    //                 let timeRange = null;
+
+    //                 if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.shiftDetails.breakTime) {
+    //                     productionTasks.data[0].shifts[0].shiftDetails.breakTime.forEach((breakPeriod) => {
+    //                         const breakStart = moment(breakPeriod.startTime, "HH:mm");
+    //                         const breakEnd = moment(breakPeriod.endTime, "HH:mm");
+    //                         const currentTime = moment(); // Thời gian hiện tại
+
+    //                         // Nếu thời gian hiện tại đã qua thời gian kết thúc của khoảng nghỉ này, cộng khoảng thời gian đó vào tổng
+    //                         if (currentTime.isAfter(breakEnd)) {
+    //                             totalBreakTimeInMinutes += breakEnd.diff(breakStart, "minutes");
+    //                         }
+    //                         // Nếu hiện tại nằm trong khoảng thời gian nghỉ, chỉ tính thời gian đã trôi qua từ đầu khoảng nghỉ
+    //                         else if (currentTime.isBetween(breakStart, breakEnd)) {
+    //                             totalBreakTimeInMinutes += currentTime.diff(breakStart, "minutes");
+    //                         }
+    //                     });
+    //                 }
+
+    //                 if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 0  ) {
+    //                 const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
+    //                     console.log(lastShift)
+
+    //                     const lastBreakEndTime = lastShift.shiftDetails.endTime;
+
+    //                     if (lastBreakEndTime) {
+    //                         timeRange = `8h-${lastBreakEndTime}`;
+    //                     }
+    //                 }
+    //                 const currentMoment = moment().tz("Asia/Ho_Chi_Minh");
+    //                 const currentHour = currentMoment.hours();
+    //                 const currentMinute = currentMoment.minutes();
+    //                 const totalMinutesFrom8AM = (currentHour - 8) * 60 + currentMinute;
+    //                 const adjustedRunTime = totalMinutesFrom8AM - totalBreakTimeInMinutes;
+    //                 const machinePercent = (((summaryStatus.data?.[0]?.runTime || 0) / 60 )/ adjustedRunTime) * 100;
+    //                 const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
+    //                 const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
+    //                 return {
+    //                     ...machine,
+    //                     currentStatus: currentStatus.data,
+    //                     productionTasks: productionTasks.data,
+    //                     percentDiff: percentDiff.data?.[0]?.[1]?.percentageChange,
+    //                     summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
+    //                     summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
+    //                     summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
+    //                     timelineEndTime: lastInterval?.endTime,
+    //                     timelineStartTime: lastInterval?.startTime,
+    //                     machinePercent: machinePercent,
+    //                     timeRange : timeRange
+    //                 };
+    //             })
+    //         );
+
+    //         return HttpResponseService.success(res, constants.SUCCESS, result);
+    //     } catch (error) {
+    //         console.error("Error in getInformationAllMachine:", error);
+    //         return HttpResponseService.internalServerError(res, error);
+    //     }
+    // },
     async getInformationAllMachine(req, res) {
         try {
             const startTime = moment().subtract('days').startOf('day').toISOString();
@@ -136,50 +231,61 @@ module.exports = {
                 endTime: endTime,
                 ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
-            const startPercent = moment().subtract(1,'days').startOf('day').toISOString();
-            
+            const startPercent = moment().subtract(1, 'days').startOf('day').toISOString();
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const summary = yesterday.toISOString().split('T')[0] + "T17:00:00.000Z";
+            console.log(startPercent);
             const result = await Promise.all(
                 allMachine.data.map(async (machine) => {
                     const paramsProductionTask = createParams(machine.deviceId);
-                    const paramsSummary = createParams(machine._id, true);
                     const timelineParams = createParams(machine._id);
                     const paramsPercentDiff = {
-                        machineId : machine._id,
+                        machineId: machine._id,
                         startTime: startPercent,
+                        endTime: endTime,
+                    }
+                    const paramsSummary = {
+                        machineId: machine._id,
+                        startTime: summary,
                         endTime: endTime,
                     }
                     const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
                         MachineOperationStatusService.getCurrentStatus(machine._id),
                         MachineOperationStatusService.getProductionTask(paramsProductionTask, 'machine'),
                         MachineOperationStatusService.getPercentDiff(paramsPercentDiff),
-                        MachineOperationStatusService.getSummaryStatus(paramsSummary),
+                        MachineOperationStatusService.getSummaryStatus(paramsPercentDiff),
                     ]);
-                    let totalBreakTimeInMinutes = 0; 
+                    let totalBreakTimeInMinutes = 0;
                     let timeRange = null;
 
-                    if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.shiftDetails.breakTime) {
-                        productionTasks.data[0].shifts[0].shiftDetails.breakTime.forEach((breakPeriod) => {
-                            const breakStart = moment(breakPeriod.startTime, "HH:mm");
+                    if (
+                        productionTasks?.data?.length > 0 &&
+                        productionTasks.data[0]?.shifts?.length > 0 &&
+                        productionTasks.data[0].shifts[0]?.shiftDetails.breakTime
+                    ) {
+                        const currentTime = moment();
+                        const isBreakTimeExceeded = productionTasks.data[0].shifts[0].shiftDetails.breakTime.some(breakPeriod => {
                             const breakEnd = moment(breakPeriod.endTime, "HH:mm");
-                            const currentTime = moment(); // Thời gian hiện tại
-                    
-                            // Nếu thời gian hiện tại đã qua thời gian kết thúc của khoảng nghỉ này, cộng khoảng thời gian đó vào tổng
-                            if (currentTime.isAfter(breakEnd)) {
-                                totalBreakTimeInMinutes += breakEnd.diff(breakStart, "minutes");
-                            }
-                            // Nếu hiện tại nằm trong khoảng thời gian nghỉ, chỉ tính thời gian đã trôi qua từ đầu khoảng nghỉ
-                            else if (currentTime.isBetween(breakStart, breakEnd)) {
-                                totalBreakTimeInMinutes += currentTime.diff(breakStart, "minutes");
-                            }
+                            return breakEnd.isAfter(currentTime);
                         });
+
+                        if (isBreakTimeExceeded) {
+                            totalBreakTimeInMinutes = 0;
+                        } else {
+                            totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].shiftDetails.breakTime.reduce((total, breakPeriod) => {
+                                const breakStart = moment(breakPeriod.startTime, "HH:mm");
+                                const breakEnd = moment(breakPeriod.endTime, "HH:mm");
+                                return total + breakEnd.diff(breakStart, "minutes");
+                            }, 0);
+                        }
                     }
-                    
-                    if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 0  ) {
-                    const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
+                    if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 1) {
+                        const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
                         console.log(lastShift)
 
                         const lastBreakEndTime = lastShift.shiftDetails.endTime;
-                    
+
                         if (lastBreakEndTime) {
                             timeRange = `8h-${lastBreakEndTime}`;
                         }
@@ -189,19 +295,13 @@ module.exports = {
                     const currentMinute = currentMoment.minutes();
                     const totalMinutesFrom8AM = (currentHour - 8) * 60 + currentMinute;
                     const adjustedRunTime = totalMinutesFrom8AM - totalBreakTimeInMinutes;
-                    const machinePercent = (((summaryStatus.data?.[0]?.runTime || 0) / 60 )/ adjustedRunTime) * 100;
+                    const machinePercent = ((summaryStatus.data?.[0]?.runTime || 0) / 60 / adjustedRunTime) * 100;
                     const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
                     const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
                     return {
                         ...machine,
                         currentStatus: currentStatus.data,
-                        currentHour: currentHour,
-                        currentMinute:currentMinute,
-                        totalBreakTimeInMinutes:totalBreakTimeInMinutes,
-                        currentMoment: currentMoment,
-                        totalMinutesFrom8AM:totalMinutesFrom8AM,
                         productionTasks: productionTasks.data,
-                        adjustedRunTime:adjustedRunTime,
                         percentDiff: percentDiff.data?.[0]?.[1]?.percentageChange,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
@@ -209,7 +309,7 @@ module.exports = {
                         timelineEndTime: lastInterval?.endTime,
                         timelineStartTime: lastInterval?.startTime,
                         machinePercent: machinePercent,
-                        timeRange : timeRange
+                        timeRange: timeRange
                     };
                 })
             );
@@ -277,8 +377,8 @@ module.exports = {
     async getTopTenRunTime(req, res) {
         try {
 
-            const { startTime, endTime,type, machineSerial } = req.query;
-            const params = { startTime, endTime, type , machineSerial};
+            const { startTime, endTime, type, machineSerial } = req.query;
+            const params = { startTime, endTime, type, machineSerial };
             const getTopTen = await MachineOperationStatusService.getTopTen(params)
             return HttpResponseService.success(res, constants.SUCCESS, getTopTen);
 
