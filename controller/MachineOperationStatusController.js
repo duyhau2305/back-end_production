@@ -3,9 +3,11 @@ const Device = require("../models/Device");
 const HttpResponseService = require("../services/HttpResponseService");
 const MachineOperationStatusService = require("../services/MachineOperationStatusService");
 const moment = require('moment');
+const { DateTime } = require('luxon');
 const ThingboardService = require("../services/ThingboardService");
 const cron = require('node-cron');
 const cronTasks = new Map();
+const now = DateTime.now();
 
 module.exports = {
     async getStatusTimeline(req, res) {
@@ -231,11 +233,11 @@ module.exports = {
                 endTime: endTime,
                 ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
-            const startPercent = moment().subtract(1, 'days').startOf('day').toISOString();
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const summary = yesterday.toISOString().split('T')[0] + "T17:00:00.000Z";
-            console.log(startPercent);
+            const startPercent = yesterday.toISOString().split('T')[0] + "T00:00:00.000Z";
+
             const result = await Promise.all(
                 allMachine.data.map(async (machine) => {
                     const paramsProductionTask = createParams(machine.deviceId);
@@ -254,7 +256,7 @@ module.exports = {
                         MachineOperationStatusService.getCurrentStatus(machine._id),
                         MachineOperationStatusService.getProductionTask(paramsProductionTask, 'machine'),
                         MachineOperationStatusService.getPercentDiff(paramsPercentDiff),
-                        MachineOperationStatusService.getSummaryStatus(paramsPercentDiff),
+                        MachineOperationStatusService.getSummaryStatus(paramsSummary),
                     ]);
                     let totalBreakTimeInMinutes = 0;
                     let timeRange = null;
@@ -302,7 +304,8 @@ module.exports = {
                         ...machine,
                         currentStatus: currentStatus.data,
                         productionTasks: productionTasks.data,
-                        percentDiff: percentDiff.data?.[0]?.[1]?.percentageChange,
+                        percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange,
+                        // percentDiff: percentDiff,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
                         summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
