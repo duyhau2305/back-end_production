@@ -2,20 +2,21 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-// create User
+// Create User
 const createUser = async (userData) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
 
     const newUser = new User({
         ...userData,
-        password: hashedPassword
+        password: hashedPassword,
+        plainTextPassword: userData.password // Store plain text password
     });
 
     return await newUser.save();
 };
 
-
+// Create Admin User
 const createAdminUser = async (userData) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
@@ -23,33 +24,59 @@ const createAdminUser = async (userData) => {
     const newAdmin = new User({
         ...userData,
         password: hashedPassword,
+        plainTextPassword: userData.password, // Store plain text password
         isAdmin: true
     });
 
     return await newAdmin.save();
 };
 
-
+// Update User
 const updateUser = async (userId, userData) => {
-    if (userData.password) {
+    // Check if plainTextPassword is sent from frontend
+    if (userData.plainTextPassword) {
+        // Keep plainTextPassword for display
+        userData.plainTextPassword = userData.plainTextPassword;
+
+        // Hash plainTextPassword and store in password field
         const salt = await bcrypt.genSalt(10);
-        userData.password = await bcrypt.hash(userData.password, salt);
+        userData.password = await bcrypt.hash(userData.plainTextPassword, salt);
     }
 
+    // Update user with plainTextPassword for display and hashed password for security
     return await User.findByIdAndUpdate(userId, userData, { new: true });
 };
 
+// Toggle User Lock Status
+const toggleLockUser = async (userId) => {
+    try {
+        const user = await User.findById(userId);
 
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Toggle the locked status
+        user.locked = !user.locked;
+        await user.save();
+
+        return user;
+    } catch (error) {
+        throw new Error('Error toggling lock status: ' + error.message);
+    }
+};
+
+// Delete User
 const deleteUser = async (userId) => {
     return await User.findByIdAndDelete(userId);
 };
 
-
+// Get All Users
 const getUsers = async () => {
     return await User.find();
 };
 
-
+// Get User by ID
 const getUserById = async (id) => {
     try {
         const user = await User.findById(id);
@@ -62,7 +89,7 @@ const getUserById = async (id) => {
     }
 };
 
-
+// Login User
 const loginUser = async (username, password) => {
     try {
         const user = await User.findOne({ username });
@@ -71,13 +98,17 @@ const loginUser = async (username, password) => {
             throw new Error('Invalid username or password');
         }
 
+        // Check if user account is locked
+        if (user.locked) {
+            throw new Error('Your account is locked. Please contact an administrator.');
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
             throw new Error('Invalid username or password');
         }
 
-     
         const token = jwt.sign(
             {
                 user: {
@@ -89,7 +120,7 @@ const loginUser = async (username, password) => {
                 }
             },
             process.env.JWT_SECRET,
-            { expiresIn: '5h' } // Token sẽ hết hạn sau 5 giờ
+            { expiresIn: '365d' } // Token expires in 12 hours
         );
 
         return { token, user };
@@ -102,6 +133,7 @@ module.exports = {
     createUser,
     createAdminUser,
     updateUser,
+    toggleLockUser, // Exporting the new function
     deleteUser,
     getUsers,
     getUserById,

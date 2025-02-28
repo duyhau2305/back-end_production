@@ -220,6 +220,7 @@ module.exports = {
         try {
             const startTime = moment().subtract('days').startOf('day').toISOString();
             const endTime = moment().toISOString();
+    
             const allMachine = await MachineOperationStatusService.getAllMachine();
             if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
                 return HttpResponseService.notFound(res, "No machines found.");
@@ -227,17 +228,19 @@ module.exports = {
             if (allMachine.status !== constants.RESOURCE_SUCCESSFULLY_FETCHED) {
                 return HttpResponseService.internalServerError(res, allMachine);
             }
+    
             const createParams = (machineId, isSummary = false) => ({
                 machineId,
                 startTime: startTime,
                 endTime: endTime,
                 ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
             });
+    
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const summary = yesterday.toISOString().split('T')[0] + "T17:00:00.000Z";
             const startPercent = yesterday.toISOString().split('T')[0] + "T00:00:00.000Z";
-
+    
             const result = await Promise.all(
                 allMachine.data.map(async (machine) => {
                     const paramsProductionTask = createParams(machine.deviceId);
@@ -246,83 +249,96 @@ module.exports = {
                         machineId: machine._id,
                         startTime: startPercent,
                         endTime: endTime,
-                    }
+                    };
                     const paramsSummary = {
                         machineId: machine._id,
                         startTime: summary,
                         endTime: endTime,
-                    }
-                    const [currentStatus, productionTasks, percentDiff, summaryStatus] = await Promise.all([
+                    };
+    
+                    const [currentStatus, productionTasks, percentDiff, summaryStatus, timelineData] = await Promise.all([
                         MachineOperationStatusService.getCurrentStatus(machine._id),
                         MachineOperationStatusService.getProductionTask(paramsProductionTask, 'machine'),
                         MachineOperationStatusService.getPercentDiff(paramsPercentDiff),
                         MachineOperationStatusService.getSummaryStatus(paramsSummary),
+                        MachineOperationStatusService.getStatusTimeline(timelineParams),
                     ]);
+    
                     let totalBreakTimeInMinutes = 0;
                     let timeRange = null;
-
-                    if (
-                        productionTasks?.data?.length > 0 &&
-                        productionTasks.data[0]?.shifts?.length > 0 &&
-                        productionTasks.data[0].shifts[0]?.shiftDetails.breakTime
-                    ) {
-                        const currentTime = moment();
-                        const isBreakTimeExceeded = productionTasks.data[0].shifts[0].shiftDetails.breakTime.some(breakPeriod => {
+                    const now = moment();
+                    const isUTC = now.utcOffset() === 0;
+                    const newTime = isUTC ? now.add(7, 'hours') : now;
+    
+                    if (productionTasks?.data?.length > 0 && productionTasks.data[0]?.shifts?.length > 0 && productionTasks.data[0].shifts[0]?.shiftDetails.breakTime) {
+                        totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].shiftDetails.breakTime.reduce((total, breakPeriod) => {
+                            const breakStart = moment(breakPeriod.startTime, "HH:mm");
                             const breakEnd = moment(breakPeriod.endTime, "HH:mm");
-                            return breakEnd.isAfter(currentTime);
-                        });
-
-                        if (isBreakTimeExceeded) {
-                            totalBreakTimeInMinutes = 0;
-                        } else {
-                            totalBreakTimeInMinutes = productionTasks.data[0].shifts[0].shiftDetails.breakTime.reduce((total, breakPeriod) => {
-                                const breakStart = moment(breakPeriod.startTime, "HH:mm");
-                                const breakEnd = moment(breakPeriod.endTime, "HH:mm");
+                            if (breakEnd.isBefore(newTime)) {
                                 return total + breakEnd.diff(breakStart, "minutes");
-                            }, 0);
-                        }
+                            }
+                            return total;
+                        }, 0);
                     }
+    
                     if (productionTasks.data.length > 0 && productionTasks.data[0].shifts && productionTasks.data[0].shifts.length > 1) {
                         const lastShift = productionTasks.data[0].shifts[productionTasks.data[0].shifts.length - 1];
-                        console.log(lastShift)
-
                         const lastBreakEndTime = lastShift.shiftDetails.endTime;
-
+    
                         if (lastBreakEndTime) {
                             timeRange = `8h-${lastBreakEndTime}`;
                         }
                     }
+                    let totalTimeByStatus = { Run: 0, Idle: 0, Stop: 0 };
+                    if (timelineData?.status === constants.RESOURCE_SUCCESSFULLY_FETCHED) {
+                        timelineData.data.forEach((dayData) => {
+                            const { totalSecondsBefore8AM } = dayData;
+                            Object.keys(totalSecondsBefore8AM).forEach((status) => {
+                                totalTimeByStatus[status] += totalSecondsBefore8AM[status];
+                            });
+                        });
+                    }
+    
+                    const lastInterval = timelineData?.data?.[0]?.intervals?.at(-1);
+    
                     const currentMoment = moment().tz("Asia/Ho_Chi_Minh");
                     const currentHour = currentMoment.hours();
                     const currentMinute = currentMoment.minutes();
                     const totalMinutesFrom8AM = (currentHour - 8) * 60 + currentMinute;
                     const adjustedRunTime = totalMinutesFrom8AM - totalBreakTimeInMinutes;
-                    const machinePercent = ((summaryStatus.data?.[0]?.runTime || 0) / 60 / adjustedRunTime) * 100;
-                    const timeline = await MachineOperationStatusService.getStatusTimeline(timelineParams);
-                    const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
+                    const machinePercent = ((summaryStatus.data?.[0]?.runTime-totalTimeByStatus.Run || 0) / 60 / adjustedRunTime) * 100;
+    
+                    
+    
                     return {
                         ...machine,
                         currentStatus: currentStatus.data,
                         productionTasks: productionTasks.data,
                         percentDiff: percentDiff.data?.[0]?.[0]?.percentageChange,
-                        // percentDiff: percentDiff,
                         summaryStatus: summaryStatus.data?.[0]?.runTime || 0,
                         summaryStatusIdle: summaryStatus.data?.[0]?.idleTime || 0,
                         summaryStatusStop: summaryStatus.data?.[0]?.stopTime || 0,
                         timelineEndTime: lastInterval?.endTime,
                         timelineStartTime: lastInterval?.startTime,
+                        totalBreakTimeInMinutes:totalBreakTimeInMinutes,
                         machinePercent: machinePercent,
-                        timeRange: timeRange
+                        timeRange: timeRange,
+                        totalMinutesFrom8AM:totalMinutesFrom8AM,
+                        adjustedRunTime:adjustedRunTime,
+                        totalTimeRun: totalTimeByStatus.Run,
+                        totalTimeIdle: totalTimeByStatus.Idle,
+                        totalTimeStop: totalTimeByStatus.Stop,
+                        paramsSummary:paramsSummary
                     };
                 })
             );
-
+    
             return HttpResponseService.success(res, constants.SUCCESS, result);
         } catch (error) {
             console.error("Error in getInformationAllMachine:", error);
             return HttpResponseService.internalServerError(res, error);
         }
-    },
+    } ,
     async getInformationAnalysis(req, res) {
         try {
             const { startTime, endTime } = req.query;
@@ -356,7 +372,6 @@ module.exports = {
                     const lastInterval = timeline?.data?.[0]?.intervals?.at(-1);
 
                     const summaryStatusByMachine = await summaryStatuses.data.filter(value => {
-
                         return value.machineId == machine._id
                     })
 
@@ -413,7 +428,53 @@ module.exports = {
     //         return { success: false, message: `No task found for deviceId ${machineId}.` };
     //     }
     // }
-
+    async getInformationSummary(req, res) {
+        try {
+            const { startTime, endTime } = req.query;
+    
+        
+            const allMachine = await MachineOperationStatusService.getAllMachine();
+            if (allMachine.status === constants.RESOURCE_NOT_FOUND) {
+                return HttpResponseService.notFound(res, "No machines found.");
+            }
+            if (allMachine.status !== constants.RESOURCE_SUCCESSFULLY_FETCHED) {
+                return HttpResponseService.internalServerError(res, allMachine);
+            }
+    
+          
+            const createParams = (machineId, isSummary = false) => ({
+                machineId,
+                startTime: startTime,
+                endTime: endTime,
+                ...(isSummary ? {} : { startTs: new Date(startTime).getTime(), endTs: new Date(endTime).getTime() })
+            });
+            
+            const summaryStatuses = await MachineOperationStatusService.getSummaryStatus(createParams(allMachine.data.map(machine => machine._id), true));
+               
+            const result = await Promise.all(
+                allMachine.data.map(async (machine) => {
+                    const paramsProductionTask = createParams(machine.deviceId);
+    
+                    
+                    const productionTasks = await MachineOperationStatusService.getProductionTask(paramsProductionTask, 'analysis');
+    
+                   
+                    const summaryStatusByMachine = summaryStatuses.data.filter(value => value.machineId == machine._id);
+    
+                    return {
+                        ...machine,
+                        productionTasks: productionTasks.data,
+                        summaryStatus: summaryStatusByMachine,
+                    };
+                })
+            );
+    
+            return HttpResponseService.success(res, constants.SUCCESS, result);
+        } catch (error) {
+            console.error("Error in getInformationSummary:", error);
+            return HttpResponseService.internalServerError(res, error);
+        }
+    }
 
 
 }

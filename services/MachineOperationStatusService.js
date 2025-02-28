@@ -14,24 +14,62 @@ module.exports = {
     async getStatusTimeline(params) {
         try {
             const { startTs, endTs, machineId } = params;
+    
             const machineProfile = await Device.findById(machineId);
             if (!machineProfile) {
                 return {
                     status: constants.RESOURCE_NOT_FOUND,
                     data: machineId
-                }
+                };
             }
+    
+            // Đặt múi giờ mặc định
+            moment.tz.setDefault('Asia/Ho_Chi_Minh');
+    
             const keys = [machineProfile.operationStatusKey];
-            const thingsboardData = await ThingboardService.getTelemetryDataByDeviceId(machineProfile.tbDeviceId, startTs, endTs, keys);
+            const thingsboardData = await ThingboardService.getTelemetryDataByDeviceId(
+                machineProfile.tbDeviceId,
+                startTs,
+                endTs,
+                keys
+            );
             const machineStatusData = thingsboardData[machineProfile.operationStatusKey] ?? [];
-            const machineStatusDataGroupByDay = groupBy(machineStatusData, (item) => moment(item.ts).tz('Asia/Ho_Chi_Minh').format("YYYY-MM-DD"));
+    
+            const machineStatusDataGroupByDay = groupBy(machineStatusData, (item) =>
+                moment(item.ts).format('YYYY-MM-DD')
+            );
+    
             let result = [];
+    
             for (let [day, statusDataPerDay] of Object.entries(machineStatusDataGroupByDay)) {
                 statusDataPerDay = sortBy(statusDataPerDay, (item) => item.ts);
+    
                 const intervals = [];
+                const totalTimeByStatus = { Stop: 0, Idle: 0, Run: 0 };
                 let currentStatus = getMachineStatus(parseInt(statusDataPerDay[0].value));
                 let startTs = parseInt(statusDataPerDay[0].ts);
-
+    
+                const startOfDay = moment(day).startOf('day').valueOf();
+                const eightAM = moment(day).startOf('day').add(8, 'hours').valueOf();
+    
+                // Tính thời gian trước 8AM
+                if (startTs < eightAM) {
+                    for (let i = 0; i < statusDataPerDay.length; i++) {
+                        const intervalStart = Math.max(statusDataPerDay[i].ts, startOfDay);
+                        const intervalEnd = Math.min(
+                            i + 1 < statusDataPerDay.length ? statusDataPerDay[i + 1].ts : eightAM,
+                            eightAM
+                        );
+    
+                        if (intervalStart < intervalEnd) {
+                            const status = getMachineStatus(parseInt(statusDataPerDay[i].value));
+                            totalTimeByStatus[status] += (intervalEnd - intervalStart) / 1000; // Tính theo giây
+                        }
+    
+                        if (intervalEnd >= eightAM) break; // Dừng lại nếu đã vượt quá 8AM
+                    }
+                }
+    
                 for (let i = 1; i < statusDataPerDay.length; i++) {
                     const status = getMachineStatus(parseInt(statusDataPerDay[i].value));
                     if (status !== currentStatus) {
@@ -44,29 +82,34 @@ module.exports = {
                         startTs = parseInt(statusDataPerDay[i].ts);
                     }
                 }
-
+    
+                // Đẩy trạng thái cuối cùng
                 intervals.push({
                     status: currentStatus,
                     startTime: new Date(startTs).toISOString(),
-                    endTime: new Date(statusDataPerDay[statusDataPerDay.length - 1].ts).toISOString()
+                    endTime: new Date(statusDataPerDay[statusDataPerDay.length - 1].ts).toISOString(),
                 });
-
+    
                 result.push({
-                    date: moment.tz(day, 'Asia/Ho_Chi_Minh').utc().toISOString(),
-                    intervals: intervals
+                    date: moment(day).utc().toISOString(),
+                    intervals: intervals,
+                    totalSecondsBefore8AM: totalTimeByStatus,
                 });
             }
+    
             return {
                 status: constants.RESOURCE_SUCCESSFULLY_FETCHED,
-                data: result
+                data: result,
             };
         } catch (err) {
             return {
                 status: constants.INTERNAL_ERROR,
-                error: err
-            }
+                error: err,
+            };
         }
-    },
+    }
+    
+       ,
 
     async getSummaryStatus(params) {
         console.log(params)
@@ -270,16 +313,16 @@ module.exports = {
                     $addFields: {
                         shifts: {
                             $map: {
-                                input: "$shifts", // Duyệt qua từng phần tử trong mảng shifts
+                                input: "$shifts",
                                 as: "shift",
                                 in: {
-                                    $mergeObjects: [ // Gộp các trường trong shift và shiftDetails vào nhau
-                                        "$$shift", // Các trường từ mảng shifts
+                                    $mergeObjects: [ 
+                                        "$$shift",
                                         {
                                             shiftDetails: {
                                                 $arrayElemAt: [
                                                     { $filter: {
-                                                        input: "$shiftDetails", // Lọc các shiftDetails
+                                                        input: "$shiftDetails", 
                                                         as: "detail",
                                                         cond: { $eq: ["$$detail.shiftName", "$$shift.shiftName"] } // Kết nối shiftDetails với shiftName trong shifts
                                                     }},

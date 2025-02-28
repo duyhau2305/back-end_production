@@ -10,5 +10,6 @@ router.get('/machine-analysis', MachineOperationStatusController.getInformationA
 router.post('/call-rpc', MachineOperationStatusController.callRpc);
 // router.post('/cancel-rpc', MachineOperationStatusController.cancelScheduledTask);
 router.get('/top-ten', MachineOperationStatusController.getTopTenRunTime);
+router.get('/topemployee', MachineOperationStatusController.getInformationSummary);
 
 module.exports = router;

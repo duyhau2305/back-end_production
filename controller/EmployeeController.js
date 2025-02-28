@@ -1,18 +1,19 @@
-const Employee = require('../models/Employee'); 
-const Area = require('../models/Area'); // 
-
+const Employee = require('../models/Employee');
+const Area = require('../models/Area');
 
 async function createEmployee(req, res) {
-  const { areaName } = req.body;
+  const { areaName } = req.body; // `areaName` là một mảng
 
   try {
-    
-    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, "i") });
-    if (!existingArea) {
-      return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
+    // Tìm các khu vực hợp lệ
+    const areas = await Area.find({ areaName: { $in: areaName } });
+    if (areas.length !== areaName.length) {
+      // Tìm các khu vực không hợp lệ
+      const invalidAreas = areaName.filter(name => !areas.some(area => area.areaName === name));
+      return res.status(400).json({ message: `Các khu vực không hợp lệ: ${invalidAreas.join(', ')}` });
     }
 
- 
+    // Tạo mới nhân viên
     const employee = new Employee(req.body);
     await employee.save();
     res.status(201).json(employee);
@@ -22,15 +23,17 @@ async function createEmployee(req, res) {
 }
 
 async function updateEmployee(req, res) {
-  const { areaName } = req.body;
+  const { areaName } = req.body; // `areaName` là một mảng
 
   try {
-    
-    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, "i") });
-    if (!existingArea) {
-      return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
+    // Kiểm tra khu vực hợp lệ
+    const areas = await Area.find({ areaName: { $in: areaName } });
+    if (areas.length !== areaName.length) {
+      const invalidAreas = areaName.filter(name => !areas.some(area => area.areaName === name));
+      return res.status(400).json({ message: `Các khu vực không hợp lệ: ${invalidAreas.join(', ')}` });
     }
 
+    // Cập nhật thông tin nhân viên
     const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!employee) {
       return res.status(404).json({ message: 'Nhân viên không tồn tại' });
@@ -41,7 +44,6 @@ async function updateEmployee(req, res) {
     res.status(400).json({ message: err.message });
   }
 }
-
 
 async function deleteEmployee(req, res) {
   try {
@@ -55,7 +57,6 @@ async function deleteEmployee(req, res) {
   }
 }
 
-
 async function getEmployeeById(req, res) {
   try {
     const employee = await Employee.findById(req.params.id);
@@ -67,7 +68,6 @@ async function getEmployeeById(req, res) {
     res.status(500).json({ message: err.message });
   }
 }
-
 
 async function getAllEmployees(req, res) {
   try {

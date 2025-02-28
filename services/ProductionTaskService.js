@@ -15,16 +15,7 @@ const productionTaskService = {
   },
 
   async getAllProductionTasks(filter = {}) {
-    const query = {};
-    console.log(filter)
-    if (filter.deviceName) {
-      query.deviceName = new RegExp(`^${filter.deviceName}$`, 'i'); 
-    }
-    if (filter.startDate || filter.endDate) {
-      query.date = {};
-      
-    }
-    return await ProductionTask.find(query);
+    return await ProductionTask.find(filter);
   },
 
   async getProductionTaskById(id) {
@@ -33,7 +24,11 @@ const productionTaskService = {
 
   async findTaskByDeviceName(deviceName) {
     return await ProductionTask.findOne({ deviceName: new RegExp(`^${deviceName}$`, "i") });
+  },
+  async findTaskByDeviceAndDate(deviceId, date) {
+    return await ProductionTask.findOne({ deviceId, date });
   }
 };
+
 
 module.exports = productionTaskService;

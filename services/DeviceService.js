@@ -1,34 +1,105 @@
-const Device = require('../models/Device'); // Import your Device model
+const Device = require('../models/Device'); 
+const Issue = require('../models/Issue'); 
 
 // Create a device
 async function createDevice(deviceData) {
-  // Không cần kiểm tra deviceCode nữa
-  const device = new Device(deviceData);
-  return await device.save();
+  try {
+    const device = new Device(deviceData);
+    return await device.save();
+  } catch (error) {
+    console.error('Error creating device:', error);
+    throw new Error('Failed to create device');
+  }
 }
-
 
 // Get a device by deviceId
 async function getDeviceById(deviceId) {
-  return await Device.findOne({ deviceId }); // Use findOne to get the matching device
+  try {
+    console.log("Fetching device with deviceId:", deviceId);
+
+    if (!deviceId) {
+      throw new Error("Invalid deviceId: deviceId is null or undefined");
+    }
+
+    const device = await Device.findOne({ deviceId });
+
+    if (!device) {
+      console.log(`Device with ID ${deviceId} not found.`); 
+      return null; 
+    }
+
+    return device;
+  } catch (error) {
+    console.error('Error fetching device by ID:', error.message);
+    throw new Error(`Failed to get device by ID: ${error.message}`);
+  }
 }
+
 
 // Update a device by ID
 async function updateDevice(id, deviceData) {
-  return await Device.findByIdAndUpdate(id, deviceData, { new: true });
+  try {
+    // Lấy thiết bị hiện tại
+    const existingDevice = await Device.findById(id);
+    if (!existingDevice) {
+      throw new Error('Device not found for update');
+    }
+
+    const oldDeviceName = existingDevice.deviceName;
+    const newDeviceName = deviceData.deviceName;
+
+   
+    const updatedDevice = await Device.findByIdAndUpdate(id, deviceData, { new: true });
+
+   
+    if (newDeviceName && newDeviceName !== oldDeviceName) {
+      await Issue.updateMany(
+        { deviceNames: oldDeviceName }, 
+        { $set: { "deviceNames.$": newDeviceName } } 
+      );
+    }
+
+    return updatedDevice;
+  } catch (error) {
+    console.error('Error updating device:', error);
+    throw new Error('Failed to update device');
+  }
 }
 
-// Delete a device by ID
 async function deleteDevice(id) {
-  return await Device.findByIdAndDelete(id);
+  try {
+    const existingDevice = await Device.findById(id);
+    if (!existingDevice) {
+      throw new Error('Device not found for deletion');
+    }
+
+    const oldDeviceName = existingDevice.deviceName;
+
+    await Issue.updateMany(
+      { deviceNames: oldDeviceName }, 
+      { $pull: { deviceNames: oldDeviceName } } 
+    );
+
+    const deletedDevice = await Device.findByIdAndDelete(id);
+    return deletedDevice;
+  } catch (error) {
+    console.error('Error deleting device:', error);
+    throw new Error('Failed to delete device');
+  }
 }
 
 // Get all devices
 async function getAllDevices() {
-  return await Device.find();
+  try {
+    const devices = await Device.find();
+    return devices;
+  } catch (error) {
+    console.error('Error fetching all devices:', error);
+    throw new Error('Failed to fetch devices');
+  }
 }
 
-// Export the functions
+// Export the service functions
 module.exports = {
   createDevice,
   getDeviceById,

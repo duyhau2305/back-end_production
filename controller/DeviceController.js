@@ -3,18 +3,14 @@ const deviceService = require('../services/DeviceService'); // Import Device Ser
 
 // Create a device
 async function createDevice(req, res) {
-  const { deviceId, deviceName, areaName, model, technicalSpecifications, purchaseDate } = req.body;
-
-  // Kiểm tra các trường bắt buộc
-  if (!deviceId || !deviceName || !areaName || !model || !purchaseDate || !technicalSpecifications) {
-    return res.status(400).json({ message: 'Tất cả các trường bắt buộc phải có.' });
-  }
-
-  // Chuyển deviceId thành chuỗi và trim
-  const trimmedDeviceId = typeof deviceId === 'string' ? deviceId.trim() : String(deviceId).trim();
-
   try {
-    console.log('Incoming device data:', req.body);
+    const { deviceId, deviceName, areaName, model, technicalSpecifications, purchaseDate } = req.body;
+
+    if (!deviceId || !deviceName || !areaName || !model || !purchaseDate || !technicalSpecifications) {
+      return res.status(400).json({ message: 'Tất cả các trường bắt buộc phải có.' });
+    }
+
+    const trimmedDeviceId = String(deviceId).trim();
     console.log('Trimmed Device ID:', trimmedDeviceId);
 
     // Kiểm tra xem thiết bị đã tồn tại chưa
@@ -25,74 +21,69 @@ async function createDevice(req, res) {
       return res.status(400).json({ message: `Thiết bị với ID ${trimmedDeviceId} đã tồn tại.` });
     }
 
-    // Kiểm tra khu vực tồn tại
-    const existingArea = await Area.findOne({ areaName: new RegExp(`^${areaName}$`, 'i') });
-    if (!existingArea) {
-      return res.status(400).json({ message: `Khu vực ${areaName} không tồn tại. Vui lòng chọn khu vực hợp lệ.` });
-    }
-
     // Tạo thiết bị mới
     const device = await deviceService.createDevice({ ...req.body, deviceId: trimmedDeviceId });
     return res.status(201).json(device);
   } catch (err) {
     console.error('Error creating device:', err);
-
-    if (err.code === 11000) {
-      return res.status(400).json({ message: `Thiết bị với ID ${trimmedDeviceId} đã tồn tại.` });
-    }
-
-    return res.status(500).json({ message: 'Đã xảy ra lỗi khi thêm thiết bị.', error: err.message });
+    return res.status(500).json({ message: 'Lỗi khi thêm thiết bị.', error: err.message });
   }
 }
 
 
-
-
 // Update a device
 async function updateDevice(req, res) {
-  const { id } = req.params;
-
   try {
-    const device = await deviceService.updateDevice(id, req.body);
-    if (!device) {
-      return res.status(404).json({ message: 'Thiết bị không tồn tại' });
+    const { id } = req.params;
+    const updatedDevice = await deviceService.updateDevice(id, req.body);
+
+    if (!updatedDevice) {
+      return res.status(404).json({ message: 'Thiết bị không tồn tại.' });
     }
-    return res.status(200).json(device);
+
+    return res.status(200).json(updatedDevice);
   } catch (err) {
-    console.error(err); // Log the error for debugging
-    return res.status(400).json({ message: err.message });
+    console.error('Error updating device:', err);
+    return res.status(500).json({ message: 'Lỗi khi cập nhật thiết bị.', error: err.message });
   }
 }
 
 // Delete a device
 async function deleteDevice(req, res) {
-  const { id } = req.params;
-
   try {
-    const device = await deviceService.deleteDevice(id);
-    if (!device) {
-      return res.status(404).json({ message: 'Thiết bị không tồn tại' });
+    const { id } = req.params;
+    const deletedDevice = await deviceService.deleteDevice(id);
+
+    if (!deletedDevice) {
+      return res.status(404).json({ message: 'Thiết bị không tồn tại.' });
     }
-    return res.status(200).json({ message: 'Xóa thiết bị thành công' });
+
+    return res.status(200).json({ message: 'Xóa thiết bị thành công.' });
   } catch (err) {
-    console.error(err); // Log the error for debugging
-    return res.status(500).json({ message: err.message });
+    console.error('Error deleting device:', err);
+    return res.status(500).json({ message: 'Lỗi khi xóa thiết bị.', error: err.message });
   }
 }
 
 // Get a device by ID
 async function getDeviceById(req, res) {
-  const { id } = req.params;
-
   try {
+    const { id } = req.params;
+
+    // Kiểm tra xem ID có hợp lệ không
+    if (!id) {
+      return res.status(400).json({ message: 'ID thiết bị không hợp lệ.' });
+    }
+
     const device = await deviceService.getDeviceById(id);
     if (!device) {
-      return res.status(404).json({ message: 'Thiết bị không tồn tại' });
+      return res.status(404).json({ message: 'Thiết bị không tồn tại.' });
     }
+
     return res.status(200).json(device);
   } catch (err) {
-    console.error(err); // Log the error for debugging
-    return res.status(500).json({ message: err.message });
+    console.error('Error fetching device by ID:', err);
+    return res.status(500).json({ message: 'Lỗi khi lấy thiết bị.', error: err.message });
   }
 }
 
@@ -102,8 +93,8 @@ async function getAllDevices(req, res) {
     const devices = await deviceService.getAllDevices();
     return res.status(200).json(devices);
   } catch (err) {
-    console.error(err); // Log the error for debugging
-    return res.status(500).json({ message: err.message });
+    console.error('Error fetching all devices:', err);
+    return res.status(500).json({ message: 'Lỗi khi lấy danh sách thiết bị.', error: err.message });
   }
 }
 

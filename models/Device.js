@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const moment = require('moment');
 
 const deviceSchema = new mongoose.Schema({
   deviceId: {
@@ -25,7 +24,7 @@ const deviceSchema = new mongoose.Schema({
   },
   technicalSpecifications: {
     type: String,
-    trim: true, // Thông số kỹ thuật có thể không bắt buộc, nhưng cần trim để loại bỏ khoảng trắng
+    trim: true, 
   },
   purchaseDate: {
     type: Date,
@@ -35,22 +34,19 @@ const deviceSchema = new mongoose.Schema({
     type: String
   },
   operationStatusKey: {
-    type: String
+    type: String,
+    default: function () {
+      return this.deviceName ? `${this.deviceName}_Status` : 'default_status';
+    }
   },
   controlKey: {
-    type: String
+    type: String,
+    default: function () {
+      return this.deviceName ? `${this.deviceName}_Control` : 'default_control';
+    }
   }
 }, {
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });
-
-// Virtual field để định dạng Ngày Mua
-deviceSchema.virtual('formattedPurchaseDate').get(function() {
-  return moment(this.purchaseDate).format('DD-MM-YYYY');
-});
-
-// Cấu hình để bao gồm virtual fields khi chuyển đổi sang JSON hoặc Object
-deviceSchema.set('toJSON', { virtuals: true });
-deviceSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('Device', deviceSchema);

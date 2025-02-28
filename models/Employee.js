@@ -13,7 +13,7 @@ const EmployeeSchema = new Schema({
     required: [true, 'Tên Nhân Viên là bắt buộc'],
   },
   areaName: {
-    type: String,
+    type: [String],
     required: [true, 'Khu vực là bắt buộc'],
   },
 }, { timestamps: true });

@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const userService = require('../services/UserService');
 const User = require('../models/User');
 
-
 const createAdminUser = async (req, res) => {
     try {
         const adminUser = await userService.createAdminUser(req.body);
@@ -14,7 +13,6 @@ const createAdminUser = async (req, res) => {
     }
 };
 
-
 const loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -23,7 +21,7 @@ const loginUser = async (req, res) => {
 
         const user = await User.findOne({ username });
         if (!user) {
-            return res.status(400).json({ message: 'Tên đăng nhập hoặc mật khẩu  không đúng' });
+            return res.status(400).json({ message: 'Tên đăng nhập hoặc mật khẩu không đúng' });
         }
 
         console.log('User found:', user);
@@ -35,7 +33,6 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Mật khẩu không đúng' });
         }
 
-       
         const token = jwt.sign(
             {
                 user: {
@@ -43,12 +40,13 @@ const loginUser = async (req, res) => {
                     role: user.role,          
                     isAdmin: user.isAdmin,    
                     username: user.username,  
-                    email: user.email,        
+                    email: user.email,
+                    name: user.name,        
                     password: user.password  
                 }
             },
             process.env.JWT_SECRET,
-            { expiresIn: '12h' }
+            { expiresIn: '365d' }
         );
 
         res.status(200).json({ token, user });
@@ -58,18 +56,14 @@ const loginUser = async (req, res) => {
     }
 };
 
-
-
 const createUser = async (req, res) => {
     try {
         const { username, password, email } = req.body;
 
-        
         if (!username || !password || !email) {
             return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ tên đăng nhập, mật khẩu và email.' });
         }
 
-        
         const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại.' });
@@ -83,18 +77,24 @@ const createUser = async (req, res) => {
     }
 };
 
-
 const updateUser = async (req, res) => {
     try {
         const userId = req.params.id;
-        const currentUser = req.user;
+        const userData = req.body;
 
-        
-        if (!currentUser.isAdmin && currentUser.id !== userId) {
-            return res.status(403).json({ message: 'Không có quyền cập nhật thông tin người dùng này.' });
+        // Kiểm tra nếu có `plainTextPassword` được gửi từ frontend
+        if (userData.plainTextPassword) {
+            // Hash plainTextPassword và lưu vào trường password
+            const salt = await bcrypt.genSalt(10);
+            userData.password = await bcrypt.hash(userData.plainTextPassword, salt);
+
+            // Xóa `plainTextPassword` khỏi `userData` trước khi cập nhật
+            delete userData.plainTextPassword;
         }
 
-        const updatedUser = await User.findByIdAndUpdate(userId, req.body, { new: true });
+        // Cập nhật người dùng với password đã hash và các trường khác nếu có
+        const updatedUser = await User.findByIdAndUpdate(userId, userData, { new: true });
+
         if (!updatedUser) {
             return res.status(404).json({ message: 'Người dùng không tồn tại.' });
         }
@@ -102,16 +102,14 @@ const updateUser = async (req, res) => {
         res.status(200).json(updatedUser);
     } catch (error) {
         console.error('Error updating user:', error.message);
-        res.status(500).json({ message: 'Lỗi khi cập nhật thông tin người dùng.', error: error.message });
+        res.status(500).json({ message: 'Lỗi khi cập nhật người dùng.', error: error.message });
     }
 };
-
 
 const deleteUser = async (req, res) => {
     try {
         const userId = req.params.id;
 
-        
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'Người dùng không tồn tại.' });
@@ -125,7 +123,6 @@ const deleteUser = async (req, res) => {
     }
 };
 
-
 const getUsers = async (req, res) => {
     try {
         const users = await userService.getUsers();
@@ -136,7 +133,6 @@ const getUsers = async (req, res) => {
     }
 };
 
-
 const toggleLockUser = async (req, res) => {
     try {
         const userId = req.params.id;
@@ -146,7 +142,6 @@ const toggleLockUser = async (req, res) => {
             return res.status(404).json({ message: 'Người dùng không tồn tại' });
         }
 
-        
         user.locked = !user.locked;
         await user.save();
 
@@ -156,7 +151,6 @@ const toggleLockUser = async (req, res) => {
         res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
 };
-
 
 const getUserById = async (req, res) => {
     try {
