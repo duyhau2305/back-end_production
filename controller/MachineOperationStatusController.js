@@ -8,6 +8,7 @@ const ThingboardService = require("../services/ThingboardService");
 const cron = require('node-cron');
 const cronTasks = new Map();
 const now = DateTime.now();
+const SocketHandlerService = require("../services/SocketHandlerService");
 
 module.exports = {
     async getStatusTimeline(req, res) {
